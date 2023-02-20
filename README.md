@@ -1,4 +1,4 @@
-# grltr  
+# grnltr  
 
 ## Author
 
@@ -27,35 +27,35 @@ Parameters are paged and the current page is indicated by the colour of LED1. Tu
 
 k1 = knob1, b1 = button1 etc.  
 
-RED = Pitch/Time page
-&nbsp;&nbsp;k1 = Grain Pitch -2 8va to +2 8va
+RED = Pitch/Time page  
+&nbsp;&nbsp;k1 = Grain Pitch -2 8va to +2 8va  
 &nbsp;&nbsp;k2 = Scan Rate  
 &nbsp;&nbsp;b1 = cycle env type  
 &nbsp;&nbsp;b2 = Reset Grain Pitch and Scan Rate  
         
-ORANGE = Grain Duration/Density page
+ORANGE = Grain Duration/Density page  
 &nbsp;&nbsp;k1 = Grain Duration 10mS to 200mS  
-&nbsp;&nbsp;k2 = Grain Density  2 per second to 200 per second
+&nbsp;&nbsp;k2 = Grain Density  2 per second to 200 per second  
 &nbsp;&nbsp;b1 = Grain Reverse  
 &nbsp;&nbsp;b2 = Scan Reverse  
         
-YELLOW = Grain Scatter page
+YELLOW = Grain Scatter page  
 &nbsp;&nbsp;k1 = Scatter Distance  
 &nbsp;&nbsp;b1 = Toggle Scatter  
 &nbsp;&nbsp;b2 = Toggle Freeze  
         
-GREEN = Random Grain Pitch page
+GREEN = Random Grain Pitch page  
 &nbsp;&nbsp;k1 = Pitch Distance  
 &nbsp;&nbsp;b1 = Toggle Random Pitch  
         
-BLUE = WAV selection page
+BLUE = WAV selection page  
 &nbsp;&nbsp;NOTE: led flashes blue during start up to indicate file reading  
 &nbsp;&nbsp;k1 = Sample Start  
 &nbsp;&nbsp;k2 = Sample End  
 &nbsp;&nbsp;b1 = Cycle Wave  
 &nbsp;&nbsp;b2 = Toggle Wave Loop  
         
-PURPLE = Decimator page
+PURPLE = Decimator page  
 &nbsp;&nbsp;k1 = Bit Crush  
 &nbsp;&nbsp;k2 = Downsample  
         
