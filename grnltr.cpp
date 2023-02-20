@@ -22,15 +22,14 @@ static DaisyPod hw;
 static Parameter knob1, knob2;
 
 #define GRAIN_ENV_SIZE 1024
-#define NUM_GRAIN_ENVS 7
+#define NUM_GRAIN_ENVS 6
 float rect_env[GRAIN_ENV_SIZE];
 float gauss_env[GRAIN_ENV_SIZE];
 float hamming_env[GRAIN_ENV_SIZE];
 float hann_env[GRAIN_ENV_SIZE];
-float blackman_env[GRAIN_ENV_SIZE];
 float expo_env[GRAIN_ENV_SIZE];
 float rexpo_env[GRAIN_ENV_SIZE];
-float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, blackman_env, expo_env, rexpo_env};
+float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, expo_env, rexpo_env};
 size_t cur_grain_env = 2; 
 
 #define MAX_WAVES 16
@@ -291,7 +290,6 @@ int main(void)
     gaussian_window(gauss_env, GRAIN_ENV_SIZE, 0.5);
     hamming_window(hamming_env, GRAIN_ENV_SIZE, EQUIRIPPLE_HAMMING_COEF);
     hann_window(hann_env, GRAIN_ENV_SIZE);
-    blackman_var_window(blackman_env, GRAIN_ENV_SIZE, BLACKMAN_NUTALL_COEFS);
     expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
 
     // Init hardware
