@@ -59,11 +59,12 @@ PURPLE = Decimator page
 &nbsp;&nbsp;k1 = Bit Crush  
 &nbsp;&nbsp;k2 = Downsample  
         
+A demo and feature walkthrough of the v0.7 version available, click here:  
+[![grnltr_demo](https://img.youtube.com/vi/RLfN7tFsF2Q/0.jpg)](https://youtu.be/RLfN7tFsF2Q "grnltr demo")  
+
 ## TODO  
 Add recording capability  
 Add MIDI control  
 Add Directory Browsing - Need a screen - target kxmx_bluemchen   
 Provide a Demo  
   
-A demo and feature walkthrough of the v0.7 version available click here:  
-[![grnltr_demo](https://img.youtube.com/vi/RLfN7tFsF2Q/0.jpg)](https://youtu.be/RLfN7tFsF2Q "grnltr demo")
