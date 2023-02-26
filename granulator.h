@@ -20,6 +20,10 @@ class Granulator
     Granulator() {}
     ~Granulator() {}
 
+    struct Params 
+    {
+    };
+
     void Init(float sr, int16_t *start, size_t len, float *env, size_t env_len) 
     {
       sr_ = sr;

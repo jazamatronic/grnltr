@@ -60,10 +60,52 @@ int8_t cur_wave = 0;
 
 float sr;
 
-
 SdmmcHandler   sd;
 FatFSInterface fsi;
 FIL            SDFile;
+
+struct {
+  float	  GrainPitch;
+  float   ScanRate;
+  float   GrainDur;
+  int32_t GrainDens;
+  float	  ScatterDist;
+  float	  PitchDist;
+  float	  SampleStart;
+  float	  SampleEnd;
+  float	  Crush;
+  float	  DownSample;
+} grnltr_params;
+
+#define MIDI_CHANNEL	    0 // todo - make this settable somehow. Daisy starts counting MIDI channels from 0
+#define CC_SCAN	       	    1 // MOD wheel controls Scan Rate
+#define CC_GRAINPITCH	    3 // CC3 and PitchBend control GrainPitch
+#define CC_GRAINDUR	    9 
+#define	CC_GRAINDENS	    14  
+#define CC_TOG_SCATTER	    15
+#define CC_SCATTERDIST	    20
+#define CC_TOG_PITCH	    21
+#define CC_PITCHDIST	    22
+#define CC_SAMPLESTART_MSB  12
+#define CC_SAMPLESTART_LSB  44
+#define CC_SAMPLEEND_MSB    13
+#define CC_SAMPLEEND_LSB    45
+#define	CC_CRUSH	    23
+#define	CC_DOWNSAMPLE	    24
+#define CC_TOG_GREV	    25
+#define CC_TOG_SREV	    26
+#define CC_TOG_FREEZE	    27
+#define CC_TOG_LOOP	    28
+#define	CC_BPM		    29
+//C3
+#define BASE_NOTE	    60
+
+void UpdateEncoder();
+void UpdateButtons();
+int  ReadWavsFromDir(const char *dir_path);
+void HandleMidiMessage();
+void InitControls();
+inline void Controls();
 
 void UpdateEncoder()
 {
@@ -141,8 +183,8 @@ void UpdateButtons()
 	grnltr.ChangeEnv(grain_envs[cur_grain_env]);
       }
       if(hw.button2.RisingEdge()) {
-	pitch_p.lock(1.0);
-  	rate_p.lock(1.0);
+	pitch_p.Lock(1.0);
+  	rate_p.Lock(1.0);
       }
       break;
     case 1:
@@ -171,6 +213,7 @@ void UpdateButtons()
 	cur_wave++;
 	if (cur_wave >= wav_file_count) cur_wave = 0;
 	grnltr.Stop();
+	InitControls();
 	grnltr.Reset( \
 	    &sm[wav_start_pos[cur_wave]], \
 	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
@@ -187,26 +230,18 @@ void UpdateButtons()
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
-  float sample, k1, k2;
+  float sample;
 
-  // It should be possible to move the param handling to the main loop instead of the audio callback
-  hw.ProcessDigitalControls();
-  UpdateButtons();
-  UpdateEncoder();
-
-  k1 = knob1.Process();
-  k2 = knob2.Process();
-
-  grnltr.SetGrainPitch(pitch_p.Process(k1, cur_page));
-  grnltr.SetScanRate(rate_p.Process(k2, cur_page));
-  grnltr.SetGrainDuration(grain_duration_p.Process(k1, cur_page));
-  grnltr.SetDensity((int32_t)grain_density_p.Process(k2, cur_page));
-  grnltr.SetScatterDist(scatter_dist_p.Process(k1, cur_page));
-  grnltr.SetPitchDist(pitch_dist_p.Process(k1, cur_page));
-  grnltr.SetSampleStart(sample_start_p.Process(k1, cur_page));
-  grnltr.SetSampleEnd(sample_end_p.Process(k2, cur_page));
-  crush.SetBitcrushFactor(crush_p.Process(k1, cur_page));
-  crush.SetDownsampleFactor(downsample_p.Process(k2, cur_page));
+  grnltr.SetGrainPitch(grnltr_params.GrainPitch);
+  grnltr.SetScanRate(grnltr_params.ScanRate);
+  grnltr.SetGrainDuration(grnltr_params.GrainDur);
+  grnltr.SetDensity(grnltr_params.GrainDens);
+  grnltr.SetScatterDist(grnltr_params.ScatterDist);
+  grnltr.SetPitchDist(grnltr_params.PitchDist);
+  grnltr.SetSampleStart(grnltr_params.SampleStart);
+  grnltr.SetSampleEnd(grnltr_params.SampleEnd);
+  crush.SetBitcrushFactor(grnltr_params.Crush);
+  crush.SetDownsampleFactor(grnltr_params.DownSample);
 
   //audio
   for(size_t i = 0; i < size; i++)
@@ -284,88 +319,269 @@ int ReadWavsFromDir(const char *dir_path)
   return 0;
 }
 
+void HandleMidiMessage() 
+{ 
+  hw.led2.Set(RED);
+  hw.UpdateLeds();
+  MidiEvent m = hw.midi.PopEvent();
+  if (m.channel != MIDI_CHANNEL) { return; } 
+  switch(m.type) { 
+    case SystemRealTime:
+    {
+      switch(m.srt_type) {
+	case Start:
+	  InitControls();
+	  grnltr.Reset( \
+	      &sm[wav_start_pos[cur_wave]], \
+	      wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+    	  grnltr.Dispatch(0);
+	  break;
+	case Continue:
+	  grnltr.Start();
+	  break;
+	case Stop:
+	  grnltr.Stop();
+	  break;
+	case Reset:
+	  break;
+	case TimingClock:
+	  // 24 ppqn pulses
+	  break;
+	default: break;
+      }
+      break;
+    }
+    case NoteOn:
+    {
+      NoteOnEvent this_note = m.AsNoteOn();
+      if ((this_note.note >= BASE_NOTE) && (this_note.note < (BASE_NOTE + wav_file_count))) {
+	cur_wave = this_note.note - BASE_NOTE;
+	grnltr.Stop();
+	InitControls();
+	grnltr.Reset( \
+	    &sm[wav_start_pos[cur_wave]], \
+	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+    	grnltr.Dispatch(0);
+      }
+      break;
+    }
+    case ControlChange:
+    {
+      ControlChangeEvent p = m.AsControlChange();
+      switch(p.control_number)
+      {
+	case CC_SCAN:
+	  rate_p.MidiCCIn(p.value);
+	  break;
+	case CC_GRAINPITCH:
+	  pitch_p.MidiCCIn(p.value);
+	  break;
+	case CC_GRAINDUR:
+	  grain_duration_p.MidiCCIn(p.value);
+	  break;
+	case CC_GRAINDENS:
+	  grain_density_p.MidiCCIn(p.value);
+	  break;
+	case CC_SCATTERDIST:
+	  scatter_dist_p.MidiCCIn(p.value);
+	  break;
+	case CC_PITCHDIST:
+	  pitch_dist_p.MidiCCIn(p.value);
+	  break;
+	case CC_SAMPLESTART_MSB:
+	  sample_start_p.MidiCCIn(p.value);
+	  break;
+	case CC_SAMPLEEND_MSB:
+	  sample_end_p.MidiCCIn(p.value);
+	  break;
+	case CC_SAMPLESTART_LSB:
+	{
+	  float cur_val = sample_start_p.CurVal();
+	  float lsb_val = ((p.value - 63) / (127.0f * 127.0f));
+	  sample_start_p.RawSet(cur_val + lsb_val);
+	  break;
+	}
+	case CC_SAMPLEEND_LSB:
+	{
+	  float cur_val = sample_end_p.CurVal();
+	  float lsb_val = ((p.value - 63) / (127.0f * 127.0f));
+	  sample_end_p.RawSet(cur_val + lsb_val);
+	  break;
+	}
+	case CC_CRUSH:
+	  crush_p.MidiCCIn(p.value);
+	  break;
+	case CC_DOWNSAMPLE:
+	  downsample_p.MidiCCIn(p.value);
+	  break;
+	case CC_TOG_GREV:
+	  grnltr.ToggleGrainReverse();
+	  break;
+	case CC_TOG_SREV:
+	  grnltr.ToggleScanReverse();
+	  break;
+	case CC_TOG_SCATTER:
+	  grnltr.ToggleScatter();
+	  break;
+	case CC_TOG_PITCH:
+	  grnltr.ToggleRandomPitch();
+	  break;
+	case CC_TOG_FREEZE:
+	  grnltr.ToggleFreeze();
+	  break;
+	case CC_TOG_LOOP:
+	  grnltr.ToggleSampleLoop();
+	  break;
+	case CC_BPM:
+	  // 60 + CC 
+	  // Need some concept of bars or beats per sample
+	  break;
+	default: break;
+      }
+      break;
+    }
+    case PitchBend:
+    {
+      PitchBendEvent p = m.AsPitchBend();
+      pitch_p.MidiPBIn(p.value);
+      break;
+    }
+    default: break;
+  }
+  hw.led2.Set(OFF);
+  hw.UpdateLeds();
+}
+
+void InitControls()
+{
+  pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	0.25f,  4.0f, PARAM_THRESH);
+  rate_p.Init(            0,  DEFAULT_SCAN_RATE,        0.25f,  4.0f, PARAM_THRESH);
+  grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        0.01f,  0.2f, PARAM_THRESH);
+  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENSITY, sr/200, sr/2, PARAM_THRESH);
+  scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	0.0f,   1.0f, PARAM_THRESH);
+  pitch_dist_p.Init(      3,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
+  sample_start_p.Init(    4,  0.0f,			0.0f,   1.0f, PARAM_THRESH);
+  sample_end_p.Init(	  4,  1.0f,			0.0f,   1.0f, PARAM_THRESH);
+  crush_p.Init(           5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
+  downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
+}
+
+inline void Controls()
+{
+  float k1, k2;
+
+  hw.ProcessDigitalControls();
+  UpdateButtons();
+  UpdateEncoder();
+  
+  k1 = knob1.Process();
+  k2 = knob2.Process();
+  
+  grnltr_params.GrainPitch =   pitch_p.Process(k1, cur_page);
+  grnltr_params.ScanRate =     rate_p.Process(k2, cur_page);
+  grnltr_params.GrainDur =     grain_duration_p.Process(k1, cur_page);
+  grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
+  grnltr_params.ScatterDist =  scatter_dist_p.Process(k1, cur_page);
+  grnltr_params.PitchDist =    pitch_dist_p.Process(k1, cur_page);
+  grnltr_params.SampleStart =  sample_start_p.Process(k1, cur_page);
+  grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
+  grnltr_params.Crush =        crush_p.Process(k1, cur_page);
+  grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
+  
+}
+
 int main(void)
 {
-    rectangular_window(rect_env, GRAIN_ENV_SIZE);
-    gaussian_window(gauss_env, GRAIN_ENV_SIZE, 0.5);
-    hamming_window(hamming_env, GRAIN_ENV_SIZE, EQUIRIPPLE_HAMMING_COEF);
-    hann_window(hann_env, GRAIN_ENV_SIZE);
-    expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
+  rectangular_window(rect_env, GRAIN_ENV_SIZE);
+  gaussian_window(gauss_env, GRAIN_ENV_SIZE, 0.5);
+  hamming_window(hamming_env, GRAIN_ENV_SIZE, EQUIRIPPLE_HAMMING_COEF);
+  hann_window(hann_env, GRAIN_ENV_SIZE);
+  expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
+  
+  // Init hardware
+  hw.Init();
+  sr = hw.AudioSampleRate();
+  
+  hw.led1.Set(RED);
+  hw.UpdateLeds();
 
-    // Init hardware
-    hw.Init();
-    sr = hw.AudioSampleRate();
+  // Init SD Card
+  SdmmcHandler::Config sd_cfg;
+  sd_cfg.Defaults();
+  sd.Init(sd_cfg);
+  
+  System::Delay(250);
+  
+  hw.led1.Set(ORANGE);
+  hw.UpdateLeds();
+  
+  // Links libdaisy i/o to fatfs driver.
+  fsi.Init(FatFSInterface::Config::MEDIA_SD);
+  
+  System::Delay(250);
+  
+  hw.led1.Set(YELLOW);
+  hw.UpdateLeds();
+  
+  // Mount SD Card
+  f_mount(&fsi.GetSDFileSystem(), "/", 1);
+  
+  System::Delay(250);
+  
+  ReadWavsFromDir("/");
+  
+  // unmount
+  f_mount(0, "/", 0);
+  
+  System::Delay(250);
+  
+  hw.led1.Set(PURPLE);
+  hw.UpdateLeds();
+  
+  grnltr.Init(sr, \
+      &sm[wav_start_pos[cur_wave]], \
+      wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t), \
+      grain_envs[cur_grain_env], \
+      GRAIN_ENV_SIZE);
+  grnltr.Dispatch(0);
+  
+  crush.Init();
+  crush.SetDownsampleFactor(0.0f);
 
-    hw.led1.Set(RED);
-    hw.UpdateLeds();
-    // Init SD Card
-    SdmmcHandler::Config sd_cfg;
-    sd_cfg.Defaults();
-    sd.Init(sd_cfg);
-
-    System::Delay(250);
-
-    hw.led1.Set(ORANGE);
-    hw.UpdateLeds();
-
-    // Links libdaisy i/o to fatfs driver.
-    fsi.Init(FatFSInterface::Config::MEDIA_SD);
-
-    System::Delay(250);
-
-    hw.led1.Set(YELLOW);
-    hw.UpdateLeds();
-
-    // Mount SD Card
-    f_mount(&fsi.GetSDFileSystem(), "/", 1);
-
-    System::Delay(250);
-
-    ReadWavsFromDir("/");
-
-    // unmount
-    f_mount(0, "/", 0);
-
-    System::Delay(250);
-
-    hw.led1.Set(PURPLE);
-    hw.UpdateLeds();
-
-    grnltr.Init(sr, \
-        &sm[wav_start_pos[cur_wave]], \
-        wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t), \
-        grain_envs[cur_grain_env], \
-        GRAIN_ENV_SIZE);
-    grnltr.Dispatch(0);
-
-    knob1.Init(hw.knob1, 0.0f, 1.0f, knob1.LINEAR);
-    knob2.Init(hw.knob2, 0.0f, 1.0f, knob2.LINEAR);
-
-    pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	  0.25f,  4.0f,	PARAM_THRESH);
-    rate_p.Init(            0,  DEFAULT_SCAN_RATE,        0.25f,  4.0f, PARAM_THRESH);
-    grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        0.01f,  0.2f, PARAM_THRESH);
-    grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENSITY, sr/200, sr/2,	PARAM_THRESH);
-    scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	  0.0f,   1.0f, PARAM_THRESH);
-    pitch_dist_p.Init(      3,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
-    sample_start_p.Init(    4,  0.0f,			  0.0f,   1.0f, PARAM_THRESH);
-    sample_end_p.Init(	    4,  1.0f,			  0.0f,   1.0f, PARAM_THRESH);
-    crush_p.Init(           5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
-    downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
-    
-    crush.Init();
-    crush.SetDownsampleFactor(0.0f);
-
-    // GO!
-    hw.StartAdc();
-    hw.StartAudio(AudioCallback);
-
-    bool ledstate;
-    ledstate = true;
-    // The onboard LED will begin to blink.
-    for(;;)
-    {
-        System::Delay(250);
-        hw.seed.SetLed(ledstate);
-        ledstate = !ledstate;
+  knob1.Init(hw.knob1, 0.0f, 1.0f, knob1.LINEAR);
+  knob2.Init(hw.knob2, 0.0f, 1.0f, knob2.LINEAR);
+  
+  InitControls();
+  
+  // GO!
+  hw.StartAdc();
+  hw.StartAudio(AudioCallback);
+  hw.midi.StartReceive();
+  
+  // Ticks are nominally 1/200MHz = 5ns
+  // For half a milisecond delay 5e-4/5e-9 = 1e5
+  uint32_t dly_ticks = 100000;
+  int  blink_mask = 511; 
+  int  blink_cnt = 0;
+  bool led_state = true;
+  for(;;)
+  {
+    blink_cnt &= blink_mask;
+    if (blink_cnt == 0) {
+      hw.seed.SetLed(led_state);
+      led_state = !led_state;
     }
+    blink_cnt++;
+  
+    hw.midi.Listen();
+    while(hw.midi.HasEvents())
+    {
+      HandleMidiMessage();
+    }
+
+    Controls();
+  
+    // Is this compatible with SystemRealTime midi messages?
+    hw.seed.system.DelayTicks(dly_ticks);
+  }
 }
