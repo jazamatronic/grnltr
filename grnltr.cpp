@@ -58,6 +58,19 @@ static PagedParam pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 int8_t cur_page = 0;
 int8_t cur_wave = 0;
 
+#define SPM 60
+#define MIDI_PPQN 24
+#define DEFAULT_BPM 120.0f
+int ppqn_count = 0;
+int got_clock = 0;
+uint32_t this_midi_tick = 0;
+uint32_t last_midi_tick = 0;
+uint32_t midi_tick_diff;
+float	 avg_midi_diff;
+float	 tick_hz, tick_dur;
+float	 midi_bpm = DEFAULT_BPM;
+float	 sample_bpm = DEFAULT_BPM;
+
 float sr;
 
 SdmmcHandler   sd;
@@ -185,6 +198,7 @@ void UpdateButtons()
       if(hw.button2.RisingEdge()) {
 	pitch_p.Lock(1.0);
   	rate_p.Lock(1.0);
+	got_clock = 0;
       }
       break;
     case 1:
@@ -319,10 +333,14 @@ int ReadWavsFromDir(const char *dir_path)
   return 0;
 }
 
+// n starts from zero
+float cum_avg(uint32_t x, int n, float ca)
+{
+  return (x + (n * ca)) / (n + 1);
+}
+
 void HandleMidiMessage() 
 { 
-  hw.led2.Set(RED);
-  hw.UpdateLeds();
   MidiEvent m = hw.midi.PopEvent();
   if (m.channel != MIDI_CHANNEL) { return; } 
   switch(m.type) { 
@@ -335,9 +353,12 @@ void HandleMidiMessage()
 	      &sm[wav_start_pos[cur_wave]], \
 	      wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
     	  grnltr.Dispatch(0);
+	  ppqn_count = 0;
+	  last_midi_tick = hw.seed.system.GetTick();
 	  break;
 	case Continue:
-	  grnltr.Start();
+	  grnltr.ReStart();
+	  last_midi_tick = hw.seed.system.GetTick();
 	  break;
 	case Stop:
 	  grnltr.Stop();
@@ -346,6 +367,24 @@ void HandleMidiMessage()
 	  break;
 	case TimingClock:
 	  // 24 ppqn pulses
+	  this_midi_tick = hw.seed.system.GetTick();
+	  if (this_midi_tick < last_midi_tick) {
+	    //wrap around?
+	    midi_tick_diff = (UINT32_MAX - last_midi_tick) + this_midi_tick;
+	  } else {
+	    midi_tick_diff = this_midi_tick - last_midi_tick;
+	  }
+	  last_midi_tick = this_midi_tick;
+	  if (++ppqn_count == MIDI_PPQN) {
+	    ppqn_count = 0;
+	    hw.led2.Set(RED);
+	  }
+	  if (ppqn_count == MIDI_PPQN / 2) {
+	    hw.led2.Set(OFF);
+	  }
+	  avg_midi_diff = cum_avg(midi_tick_diff, ppqn_count, avg_midi_diff);
+	  midi_bpm = SPM / (MIDI_PPQN * avg_midi_diff * tick_dur);
+	  got_clock = 1;
 	  break;
 	default: break;
       }
@@ -448,8 +487,6 @@ void HandleMidiMessage()
     }
     default: break;
   }
-  hw.led2.Set(OFF);
-  hw.UpdateLeds();
 }
 
 void InitControls()
@@ -470,14 +507,13 @@ inline void Controls()
 {
   float k1, k2;
 
-  hw.ProcessDigitalControls();
-  UpdateButtons();
-  UpdateEncoder();
-  
   k1 = knob1.Process();
   k2 = knob2.Process();
   
   grnltr_params.GrainPitch =   pitch_p.Process(k1, cur_page);
+  if (got_clock) {
+    rate_p.Set(midi_bpm / sample_bpm);
+  }
   grnltr_params.ScanRate =     rate_p.Process(k2, cur_page);
   grnltr_params.GrainDur =     grain_duration_p.Process(k1, cur_page);
   grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
@@ -487,7 +523,6 @@ inline void Controls()
   grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
   grnltr_params.Crush =        crush_p.Process(k1, cur_page);
   grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
-  
 }
 
 int main(void)
@@ -557,31 +592,40 @@ int main(void)
   hw.StartAdc();
   hw.StartAudio(AudioCallback);
   hw.midi.StartReceive();
+
+  tick_hz = 2 * hw.seed.system.GetPClk1Freq();
+  tick_dur = 1 / tick_hz;
   
-  // Ticks are nominally 1/200MHz = 5ns
-  // For half a milisecond delay 5e-4/5e-9 = 1e5
-  uint32_t dly_ticks = 100000;
-  int  blink_mask = 511; 
-  int  blink_cnt = 0;
+  int blink_mask = 511; 
+  int blink_cnt = 0;
+  int dly_mask = 255;
+  int dly_cnt = 0;
+
   bool led_state = true;
   for(;;)
   {
-    blink_cnt &= blink_mask;
-    if (blink_cnt == 0) {
-      hw.seed.SetLed(led_state);
-      led_state = !led_state;
-    }
-    blink_cnt++;
-  
     hw.midi.Listen();
     while(hw.midi.HasEvents())
     {
       HandleMidiMessage();
     }
 
-    Controls();
-  
-    // Is this compatible with SystemRealTime midi messages?
-    hw.seed.system.DelayTicks(dly_ticks);
+    hw.ProcessDigitalControls();
+    UpdateButtons();
+    UpdateEncoder();
+
+    // counter here so we don't do this too often if it's called repeatedly in the main loop
+    dly_cnt &= dly_mask;
+    if (dly_cnt == 0) {
+      Controls();
+
+      blink_cnt &= blink_mask;
+      if (blink_cnt == 0) {
+        hw.seed.SetLed(led_state);
+        led_state = !led_state;
+      }
+      blink_cnt++;
+    } 
+    dly_cnt++;
   }
 }

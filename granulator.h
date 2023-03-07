@@ -57,6 +57,12 @@ class Granulator
       stop_ = false;
     }
 
+    void ReStart()
+    {
+      sample_pos_.Reset();
+      stop_ = false;
+    }
+
     void Reset(int16_t *start, size_t len) 
     {
       len_ = len;

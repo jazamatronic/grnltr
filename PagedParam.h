@@ -36,7 +36,6 @@ class PagedParam
       range_ = max - min;
     }
 
-
     // val is the user value of the param ie, between min and max
     void Lock(float val)
     {
@@ -44,6 +43,14 @@ class PagedParam
       midi_locked_ = true;
       cur_val_ = (val - min_) / range_;
     }
+
+    // val is the user value of the param ie, between min and max
+    void Set(float val)
+    {
+      locked_ = true;
+      cur_val_ = (val - min_) / range_;
+    }
+
 
     // val is a raw value of the param i.e. between 0 and 1
     void RawLock(float val)
