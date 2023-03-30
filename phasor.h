@@ -58,6 +58,7 @@ class Phasor
     }
 
     // Don't let end_pos_ get in front of start_pos_
+    // should it be end pos or length?
     void SetEndPos(float pos)
     {
       size_t tmp_pos;

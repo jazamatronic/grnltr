@@ -101,7 +101,8 @@ struct {
 #define CC_TOG_SREV	    26
 #define CC_TOG_FREEZE	    27
 #define CC_TOG_LOOP	    28
-#define	CC_BPM		    29
+#define CC_TOG_DENS	    29
+#define	CC_BPM		    30
 //C3
 #define BASE_NOTE	    60
 
@@ -150,6 +151,7 @@ void UpdateEncoder()
       /*
        * k1 = Pitch Distance
        * b1 = Toggle Random Pitch
+       * b2 = Toggle Random Density
        */
       break;
     case 4:
@@ -213,6 +215,9 @@ void UpdateButtons()
     case 3:
       if(hw.button1.RisingEdge()) {
 	grnltr.ToggleRandomPitch();
+      }
+      if(hw.button2.RisingEdge()) {
+	grnltr.ToggleRandomDensity();
       }
       break;
     case 4:
@@ -421,6 +426,9 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
       break;
     case CC_TOG_LOOP:
       grnltr.ToggleSampleLoop();
+      break;
+    case CC_TOG_DENS:
+      grnltr.ToggleRandomDensity();
       break;
     case CC_BPM:
       // 60 + CC 

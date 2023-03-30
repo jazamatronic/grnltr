@@ -40,7 +40,7 @@ class Granulator
       SetDensity(sr_/DEFAULT_GRAIN_DENSITY);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
-      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = false;
+      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }
@@ -76,7 +76,7 @@ class Granulator
       SetDensity(sr_/DEFAULT_GRAIN_DENSITY);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
-      random_pitch_ = scatter_grain_ = reverse_grain_ = false;
+      random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }
@@ -171,6 +171,11 @@ class Granulator
       random_pitch_ = random_pitch_ ? false : true;
     }
 
+    void ToggleRandomDensity()
+    {
+      random_density_ = random_density_ ? false : true;
+    }
+
     // All pos are in the range 0 to 1
     // They will be multiplied by len_ to get actual size_t sample position
     void SetSampleStart(float pos)
@@ -203,7 +208,13 @@ class Granulator
 
       if (density_count_-- < 0)
       {
-	density_count_ = density_;
+	if (random_density_) {
+	  rand = rng.Process();
+	  density_count_ = rand * density_;
+	} else {
+	  density_count_ = density_;
+	}
+
 	if (scatter_grain_) {
 	  rand = rng.Process();
 	  offset = rand * scatter_dist_;
@@ -237,7 +248,7 @@ class Granulator
     int32_t density_, density_count_;
     float sr_, grain_dur_, grain_pitch_, pitch_dist_;
     float *env_mem_;
-    bool sample_loop_, stop_, reverse_grain_, scatter_grain_, random_pitch_, freeze_;
+    bool sample_loop_, stop_, reverse_grain_, scatter_grain_, random_pitch_, random_density_, freeze_;
     daisysp::crc_noise rng;
 };
 
