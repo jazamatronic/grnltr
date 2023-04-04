@@ -61,7 +61,8 @@ size_t	    wav_start_pos[MAX_WAVES];
 
 #define PARAM_THRESH 0.01f
 static PagedParam pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
-		  grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, sample_end_p;
+		  grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
+		  sample_end_p;
 
 #define NUM_PAGES 6
 int8_t cur_page = 0;

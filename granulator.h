@@ -2,7 +2,6 @@
 
 #include "grain.h"
 #include "crc_noise.h"
-#include "daisysp.h"
 
 #define MAX_GRAINS 16
 #define DEFAULT_GRAIN_DUR 0.2f 
@@ -29,32 +28,16 @@ class Granulator
     Granulator() {}
     ~Granulator() {}
 
-    struct Params 
-    {
-    };
-
     void Init(float sr, int16_t *start, size_t len, float *env, size_t env_len) 
     {
       sr_ = sr;
+      sample_start_ = start;
       len_ = len;
-      sample_pos_.Init(sr_, len_);
-      sample_pos_.ToggleLoop();
-      sample_loop_ = true;
       env_mem_ = env;
       env_len_ = env_len;
-      density_count_ = -1;
-      SetGrainDuration(DEFAULT_GRAIN_DUR);
-      SetGrainPitch(DEFAULT_GRAIN_PITCH);
-      SetScanRate(DEFAULT_SCAN_RATE);
-      SetDensity(sr_/DEFAULT_GRAIN_DENS);
-      SetScatterDist(DEFAULT_SCATTER_DIST);
-      SetPitchDist(DEFAULT_PITCH_DIST);
-      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
-      for (size_t i = 0; i < MAX_GRAINS; i++) {
-	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
-      }
-      rng.Init();
+      Setup();
       live_ = filled_ = false;
+      rng.Init();
     }
 
     void Stop()
@@ -76,23 +59,10 @@ class Granulator
 
     void Reset(int16_t *start, size_t len) 
     {
+      sample_start_ = start;
       len_ = len;
-      sample_pos_.Init(sr_, len_);
-      sample_pos_.ToggleLoop();
-      sample_loop_ = true;
-      density_count_ = -1;
-      SetGrainDuration(DEFAULT_GRAIN_DUR);
-      SetGrainPitch(DEFAULT_GRAIN_PITCH);
-      SetScanRate(DEFAULT_SCAN_RATE);
-      SetDensity(sr_/DEFAULT_GRAIN_DENS);
-      SetScatterDist(DEFAULT_SCATTER_DIST);
-      SetPitchDist(DEFAULT_PITCH_DIST);
-      random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
-      for (size_t i = 0; i < MAX_GRAINS; i++) {
-	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
-      }
+      Setup();
       live_ = filled_ = false;
-      stop_ = false;
     }
 
     /*
@@ -104,26 +74,13 @@ class Granulator
      */
     void Live(int16_t *start, size_t len) 
     {
+      sample_start_ = start;
       len_ = len;
-      sample_pos_.Init(sr_, len_);
-      sample_pos_.ToggleLoop();
-      sample_loop_ = true;
-      density_count_ = -1;
-      SetGrainDuration(DEFAULT_GRAIN_DUR);
-      SetGrainPitch(DEFAULT_GRAIN_PITCH);
-      SetScanRate(DEFAULT_SCAN_RATE);
-      SetDensity(sr_/DEFAULT_GRAIN_DENS);
-      SetScatterDist(DEFAULT_SCATTER_DIST);
-      SetPitchDist(DEFAULT_PITCH_DIST);
-      random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
-      record_buf_ = start;
+      record_buf_ = sample_start_;
       write_pos_ = 0;
-      for (size_t i = 0; i < MAX_GRAINS; i++) {
-	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
-      }
+      Setup();
       live_ = true;
       filled_ = false;
-      stop_ = false;
     }
 
     // don't allow this in live mode
@@ -247,6 +204,7 @@ class Granulator
       }
     }
 
+
     float Process(int16_t input)
     {
       float sample = 0;
@@ -308,8 +266,28 @@ class Granulator
     }
 
   private:
+
+    void Setup()
+    {
+      sample_pos_.Init(sr_, len_);
+      sample_pos_.ToggleLoop();
+      sample_loop_ = true;
+      density_count_ = -1;
+      SetGrainDuration(DEFAULT_GRAIN_DUR);
+      SetGrainPitch(DEFAULT_GRAIN_PITCH);
+      SetScanRate(DEFAULT_SCAN_RATE);
+      SetDensity(sr_/DEFAULT_GRAIN_DENS);
+      SetScatterDist(DEFAULT_SCATTER_DIST);
+      SetPitchDist(DEFAULT_PITCH_DIST);
+      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
+      for (size_t i = 0; i < MAX_GRAINS; i++) {
+	silo[i].Init(sr_, sample_start_, len_, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
+      }
+    }
+
     Grain<int16_t> silo[MAX_GRAINS];
     Phasor sample_pos_;
+    int16_t *sample_start_;  
     size_t len_, env_len_, scatter_dist_, write_pos_;
     int32_t density_, density_count_;
     float sr_, grain_dur_, grain_pitch_, pitch_dist_;
