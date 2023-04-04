@@ -42,7 +42,14 @@ size_t cur_grain_env = 2;
 // 64 MB of memory - how many 16bit samples can we fit in there?
 static int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];
 size_t sm_size = sizeof(sm);
-size_t cur_sm_bytes = 0;
+//size_t cur_sm_bytes = 0;
+
+// put a record buffer at the start of memory
+// It should be sizeof(int16_t) * sr * MAX_GRAIN_DUR * MAX_GRAIN_PITCH * 2 in length 
+// cur_sm_bytes needs to be set in init now to catch the sample rate
+// but done before SD file waveform reading
+size_t cur_sm_bytes;
+size_t live_rec_buf_len;
 
 // Buffer for copying wav files to SDRAM
 #define BUF_SIZE 8192
@@ -124,7 +131,7 @@ void UpdateEncoder()
       hw.led1.Set(RED);
       /*
        * k1 = Grain Pitch
-       * k2 = Scan Rate
+       * k2 = Scan Rate (disabled in live mode)
        * b1 = cycle env type
        * b2 = Reset Grain Pitch and Scan Rate
        */
@@ -135,7 +142,7 @@ void UpdateEncoder()
        * k1 = Grain Duration
        * k2 = Grain Density
        * b1 = Grain Reverse
-       * b2 = Scan Reverse
+       * b2 = Scan Reverse (disabled in live mode)
        */
       break;
     case 2:
@@ -169,6 +176,8 @@ void UpdateEncoder()
       /*
        * k1 = Bit Crush
        * k2 = Downsample
+       * b1 = Live Mode
+       * b2 = Sample Mode
        */
       break;
     default:
@@ -235,6 +244,28 @@ void UpdateButtons()
 	grnltr.ToggleSampleLoop();
       }
       break;
+    case 5:
+      if(hw.button1.RisingEdge()) {
+	grnltr.Stop();
+	InitControls();
+	grnltr.Live( \
+	    &sm[0], \
+	    live_rec_buf_len);
+      }
+      if(hw.button2.RisingEdge()) {
+	grnltr.Stop();
+	InitControls();
+/*
+ *	grnltr.Reset( \
+ *	    &sm[wav_start_pos[cur_wave]], \
+ *	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+ */
+	grnltr.Reset( \
+	    &sm[0], \
+	    live_rec_buf_len);
+    	grnltr.Dispatch(0);
+      }
+      break;
     default:
       break;
   }
@@ -258,7 +289,7 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
   //audio
   for(size_t i = 0; i < size; i++)
   {
-    sample = grnltr.Process();
+    sample = grnltr.Process(f2s16(in[0][i]));
     sample = crush.Process(sample);
     out[0][i] = sample;
     out[1][i] = sample;
@@ -458,10 +489,10 @@ void MidiNOHCB(uint8_t n, uint8_t vel)
 
 void InitControls()
 {
-  pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	0.25f,  4.0f, PARAM_THRESH);
-  rate_p.Init(            0,  DEFAULT_SCAN_RATE,        0.25f,  4.0f, PARAM_THRESH);
-  grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        0.01f,  0.2f, PARAM_THRESH);
-  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENSITY, sr/200, sr/2, PARAM_THRESH);
+  pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	MIN_GRAIN_PITCH,  MAX_GRAIN_PITCH,  PARAM_THRESH);
+  rate_p.Init(            0,  DEFAULT_SCAN_RATE,        MIN_SCAN_RATE,	  MAX_SCAN_RATE,    PARAM_THRESH);
+  grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        MIN_GRAIN_DUR,    MAX_GRAIN_DUR,    PARAM_THRESH);
+  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENS,  sr/MIN_GRAIN_DENS, sr/MAX_GRAIN_DENS, PARAM_THRESH);
   scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	0.0f,   1.0f, PARAM_THRESH);
   pitch_dist_p.Init(      3,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
   sample_start_p.Init(    4,  0.0f,			0.0f,   1.0f, PARAM_THRESH);
@@ -503,6 +534,8 @@ int main(void)
   // Init hardware
   hw.Init();
   sr = hw.AudioSampleRate();
+  cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
+  live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
   
   hw.led1.Set(RED);
   hw.UpdateLeds();

@@ -2,12 +2,21 @@
 
 #include "grain.h"
 #include "crc_noise.h"
+#include "daisysp.h"
 
 #define MAX_GRAINS 16
 #define DEFAULT_GRAIN_DUR 0.2f 
+#define MIN_GRAIN_DUR 0.01f 
+#define MAX_GRAIN_DUR 0.2f 
 #define DEFAULT_GRAIN_PITCH 1.0f 
+#define MIN_GRAIN_PITCH 0.25f
+#define MAX_GRAIN_PITCH 4.0f
 #define DEFAULT_SCAN_RATE 1.0f 
-#define DEFAULT_GRAIN_DENSITY 10 
+#define MIN_SCAN_RATE 0.25f
+#define MAX_SCAN_RATE 4.0f
+#define DEFAULT_GRAIN_DENS 10 
+#define MIN_GRAIN_DENS 200 
+#define MAX_GRAIN_DENS 2 
 #define DEFAULT_SCATTER_DIST  0.1f 
 #define DEFAULT_PITCH_DIST    0.1f 
 #define DEFAULT_GRAIN_VOL     0.7f
@@ -37,7 +46,7 @@ class Granulator
       SetGrainDuration(DEFAULT_GRAIN_DUR);
       SetGrainPitch(DEFAULT_GRAIN_PITCH);
       SetScanRate(DEFAULT_SCAN_RATE);
-      SetDensity(sr_/DEFAULT_GRAIN_DENSITY);
+      SetDensity(sr_/DEFAULT_GRAIN_DENS);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
       stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
@@ -45,11 +54,13 @@ class Granulator
 	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }
       rng.Init();
+      live_ = filled_ = false;
     }
 
     void Stop()
     {
       stop_ = true;
+      filled_ = false;
     }
 
     void Start()
@@ -73,13 +84,45 @@ class Granulator
       SetGrainDuration(DEFAULT_GRAIN_DUR);
       SetGrainPitch(DEFAULT_GRAIN_PITCH);
       SetScanRate(DEFAULT_SCAN_RATE);
-      SetDensity(sr_/DEFAULT_GRAIN_DENSITY);
+      SetDensity(sr_/DEFAULT_GRAIN_DENS);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
       random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }
+      live_ = filled_ = false;
+      stop_ = false;
+    }
+
+    /*
+     * This live looping is very naive, shoehorning the record buffer into a Phasor/SamplePhasor
+     * instead of something specifically designed for it.
+     * A proper record buffer should be in something like a delay line or circular buffer 
+     * where the start and end points are moved and wrapped accordingly as the write head moves.
+     * Maybe its possible to retrofit that into the existing grain code with a little more thought and effort
+     */
+    void Live(int16_t *start, size_t len) 
+    {
+      len_ = len;
+      sample_pos_.Init(sr_, len_);
+      sample_pos_.ToggleLoop();
+      sample_loop_ = true;
+      density_count_ = -1;
+      SetGrainDuration(DEFAULT_GRAIN_DUR);
+      SetGrainPitch(DEFAULT_GRAIN_PITCH);
+      SetScanRate(DEFAULT_SCAN_RATE);
+      SetDensity(sr_/DEFAULT_GRAIN_DENS);
+      SetScatterDist(DEFAULT_SCATTER_DIST);
+      SetPitchDist(DEFAULT_PITCH_DIST);
+      random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
+      record_buf_ = start;
+      write_pos_ = 0;
+      for (size_t i = 0; i < MAX_GRAINS; i++) {
+	silo[i].Init(sr_, start, len, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
+      }
+      live_ = true;
+      filled_ = false;
       stop_ = false;
     }
 
@@ -105,9 +148,12 @@ class Granulator
       pitch_dist_ = dist;
     }
 
+    // don't allow this in live mode
     void SetScanRate(float rate)
     {
-      sample_pos_.SetPitch(rate);
+      if (!live_) {
+	sample_pos_.SetPitch(rate);
+      }
     }
 
     // dist is % of the sample length
@@ -145,9 +191,12 @@ class Granulator
     }
 
 
+    // don't allow this in live mode
     void ToggleScanReverse()
     {
-      sample_pos_.ToggleReverse();
+      if (!live_) {
+	sample_pos_.ToggleReverse();
+      }
     }
 
     void ToggleGrainReverse()
@@ -188,12 +237,12 @@ class Granulator
       sample_pos_.SetEndPos(pos);
     }
 
-    float Process()
+    float Process(int16_t input)
     {
       float sample = 0;
       float rand;
       int32_t offset;
-      size_t pos;
+      size_t pos = 0;
       bool eot = false;
 
       if (stop_) return 0.0f;
@@ -202,9 +251,11 @@ class Granulator
       {
 	pos = sample_pos_.GetPos();
       } else {
+	if (live_) { record_buf_[write_pos_] = input; }
 	pos = sample_pos_.Process(&eot);
+	write_pos_ = pos;
+	if (eot) { filled_ = true; }
       }
-
 
       if (density_count_-- < 0)
       {
@@ -219,15 +270,20 @@ class Granulator
 	  rand = rng.Process();
 	  offset = rand * scatter_dist_;
 
+
+// Do the pragma dance - we take care of wrap around 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
 	  offset += pos;
 	  if (offset < 0) {
 	    offset += len_;
 	  } else if (offset > len_) {
 	    offset -= len_;
 	  }
+#pragma GCC diagnostic pop
 	  pos = (size_t)offset;
 	}
-	Dispatch(pos);
+	if (!live_ || filled_) { Dispatch(pos); }
       }
 
       for (size_t i = 0; i < MAX_GRAINS; i++) {
@@ -244,11 +300,15 @@ class Granulator
   private:
     Grain<int16_t> silo[MAX_GRAINS];
     Phasor sample_pos_;
-    size_t len_, env_len_, scatter_dist_;
+    size_t len_, env_len_, scatter_dist_, write_pos_;
     int32_t density_, density_count_;
     float sr_, grain_dur_, grain_pitch_, pitch_dist_;
     float *env_mem_;
     bool sample_loop_, stop_, reverse_grain_, scatter_grain_, random_pitch_, random_density_, freeze_;
     daisysp::crc_noise rng;
+
+    // used for live record buffer only
+    int16_t *record_buf_;  
+    bool live_, filled_;
 };
 
