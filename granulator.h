@@ -126,11 +126,14 @@ class Granulator
       stop_ = false;
     }
 
+    // don't allow this in live mode
     void ToggleSampleLoop()
     {
-      sample_loop_ = sample_loop_ ? false : true;
-      sample_pos_.ToggleLoop();
-      if (sample_loop_) Start();
+      if (!live_) {
+	sample_loop_ = sample_loop_ ? false : true;
+      	sample_pos_.ToggleLoop();
+      	if (sample_loop_) Start();
+      }
     }
 
     void SetGrainDuration(float dur)
@@ -227,14 +230,21 @@ class Granulator
 
     // All pos are in the range 0 to 1
     // They will be multiplied by len_ to get actual size_t sample position
+
+    // don't allow this in live mode
     void SetSampleStart(float pos)
     {
-      sample_pos_.SetStartPos(pos);
+      if (!live_) {
+	sample_pos_.SetStartPos(pos);
+      }
     }
 
+    // don't allow this in live mode
     void SetSampleEnd(float pos)
     {
-      sample_pos_.SetEndPos(pos);
+      if (!live_) {
+	sample_pos_.SetEndPos(pos);
+      }
     }
 
     float Process(int16_t input)

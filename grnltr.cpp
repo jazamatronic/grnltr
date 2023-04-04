@@ -110,6 +110,8 @@ struct {
 #define CC_TOG_LOOP	    28
 #define CC_TOG_DENS	    29
 #define	CC_BPM		    30
+#define	CC_LIVE_REC	    31
+#define	CC_LIVE_SAMP	    32
 //C3
 #define BASE_NOTE	    60
 
@@ -165,10 +167,10 @@ void UpdateEncoder()
       hw.led1.Set(BLUE);
       /*
        * NOTE: led flashes blue during start up to indicate file reading
-       * k1 = Sample Start
-       * k2 = Sample End
+       * k1 = Sample Start (disabled in live mode) 
+       * k2 = Sample End (disabled in live mode)
        * b1 = Cycle Wave
-       * b2 = Toggle Wave Loop
+       * b2 = Toggle Wave Loop (disabled in live mode)
        */
       break;
     case 5:
@@ -460,6 +462,21 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
       break;
     case CC_TOG_DENS:
       grnltr.ToggleRandomDensity();
+      break;
+    case CC_LIVE_REC:
+      grnltr.Stop();
+      InitControls();
+      grnltr.Live( \
+          &sm[0], \
+          live_rec_buf_len);
+      break;
+    case CC_LIVE_SAMP:
+      grnltr.Stop();
+      InitControls();
+      grnltr.Reset( \
+          &sm[0], \
+          live_rec_buf_len);
+      grnltr.Dispatch(0);
       break;
     case CC_BPM:
       // 60 + CC 
