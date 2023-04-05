@@ -3,8 +3,11 @@
 #define SPM 60.0f
 
 #ifdef TARGET_POD
-#include "daisy_pod.h"
 #include "pod.h"
+#endif
+
+#ifdef TARGET_BLUEMCHEN
+#include "bluemchen.h"
 #endif
 
 
@@ -77,7 +80,7 @@ class MidiMsgHandler
       }
     }
 
-    void SetHWHandle(daisy::DaisyPod *hw)
+    void SetHWHandle(HW_TYPE *hw)
     {
       hw_handle_ = hw;
       tick_dur_ = 1.0f / (2 * hw_handle_->seed.system.GetPClk1Freq());
@@ -199,7 +202,7 @@ class MidiMsgHandler
     }
 
   private:
-    daisy::DaisyPod *hw_handle_;
+    HW_TYPE *hw_handle_;
     int ppqn_ = 24;
     int channel_ = 0;
     int ppqn_count_ = 0;

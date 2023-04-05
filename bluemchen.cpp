@@ -1,7 +1,7 @@
-#include "pod.h"
-#include "led_colours.h"
+#include "kxmx_bluemchen.h"
+#include "bluemchen.h"
 
-DaisyPod hw;
+kxmx::Bluemchen hw;
 static Parameter knob1, knob2;
 
 void UpdateEncoder()
@@ -12,7 +12,6 @@ void UpdateEncoder()
   switch(cur_page)
   {
     case 0:
-      hw.led1.Set(RED);
       /*
        * k1 = Grain Pitch
        * k2 = Scan Rate (disabled in live mode)
@@ -21,7 +20,6 @@ void UpdateEncoder()
        */
       break;
     case 1:
-      hw.led1.Set(ORANGE);
       /*
        * k1 = Grain Duration
        * k2 = Grain Density
@@ -30,7 +28,6 @@ void UpdateEncoder()
        */
       break;
     case 2:
-      hw.led1.Set(YELLOW);
       /*
        * k1 = Scatter Distance
        * b1 = Toggle Scatter
@@ -38,7 +35,6 @@ void UpdateEncoder()
        */
       break;
     case 3:
-      hw.led1.Set(GREEN);
       /*
        * k1 = Pitch Distance
        * b1 = Toggle Random Pitch
@@ -46,7 +42,6 @@ void UpdateEncoder()
        */
       break;
     case 4:
-      hw.led1.Set(BLUE);
       /*
        * NOTE: led flashes blue during start up to indicate file reading
        * k1 = Sample Start (disabled in live mode) 
@@ -56,7 +51,6 @@ void UpdateEncoder()
        */
       break;
     case 5:
-      hw.led1.Set(PURPLE);
       /*
        * k1 = Bit Crush
        * k2 = Downsample
@@ -67,9 +61,9 @@ void UpdateEncoder()
     default:
       break;
   }
-  hw.UpdateLeds();
 }
 
+/*
 void UpdateButtons()
 {
   switch(cur_page)
@@ -149,6 +143,7 @@ void UpdateButtons()
       break;
   }
 }
+*/
 
 void Controls()
 {
@@ -178,8 +173,8 @@ float hw_init() {
 }
 
 void hw_start(AudioHandle::AudioCallback cb) {
-  knob1.Init(hw.knob1, 0.0f, 1.0f, knob1.LINEAR);
-  knob2.Init(hw.knob2, 0.0f, 1.0f, knob2.LINEAR);
+  knob1.Init(hw.controls[hw.CTRL_1], 0.0f, 1.0f, knob1.LINEAR);
+  knob2.Init(hw.controls[hw.CTRL_2], 0.0f, 1.0f, knob2.LINEAR);
   hw.StartAdc();
   hw.StartAudio(cb);
   hw.midi.StartReceive();

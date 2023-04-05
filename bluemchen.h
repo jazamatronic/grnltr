@@ -1,8 +1,8 @@
 #pragma once
 
-#define HW_TYPE daisy::DaisyPod
+#define HW_TYPE kxmx::Bluemchen
 
-#include "daisy_pod.h"
+#include "kxmx_bluemchen.h"
 #include "grain_envs.h"
 #include "params.h"
 #include "sample_mem.h"
@@ -16,7 +16,7 @@ extern int8_t cur_wave;
 extern float sample_bpm;
 extern Granulator grnltr;
 extern MidiMsgHandler mmh;
-extern DaisyPod hw;
+extern kxmx::Bluemchen hw;
 
 float hw_init();
 void hw_start(AudioHandle::AudioCallback cb);

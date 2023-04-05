@@ -1,8 +1,19 @@
 # Project Name
-TARGET = grnltr
+BUILD_TARGET ?= pod
 
 # Sources
-CPP_SOURCES = grnltr.cpp windows.cpp pod.cpp
+CPP_SOURCES = grnltr.cpp windows.cpp 
+
+ifeq "$(BUILD_TARGET)" "bluemchen"
+TARGET = grnltr_bluemchen
+BLUEMCHEN_DIR = ./kxmx_bluemchen
+CPP_SOURCES += $(BLUEMCHEN_DIR)/src/kxmx_bluemchen.cpp bluemchen.cpp
+endif
+
+ifeq "$(BUILD_TARGET)" "pod"
+TARGET = grnltr_pod
+CPP_SOURCES += pod.cpp
+endif
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy
@@ -15,5 +26,12 @@ USE_FATFS = 1
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
 
+ifeq "$(BUILD_TARGET)" "bluemchen"
+C_DEFS += -DTARGET_BLUEMCHEN
+C_INCLUDES += -I$(BLUEMCHEN_DIR)/src
+endif
+
+ifeq "$(BUILD_TARGET)" "pod"
 C_DEFS += -DTARGET_POD
+endif
 

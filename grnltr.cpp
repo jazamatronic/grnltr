@@ -6,8 +6,11 @@
 #include <string.h>
 
 #ifdef TARGET_POD
-#include "daisy_pod.h"
 #include "pod.h"
+#endif
+
+#ifdef TARGET_BLUEMCHEN
+#include "bluemchen.h"
 #endif
 
 #include "fatfs.h"
@@ -370,9 +373,7 @@ int main(void)
   expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
   
   // Init hardware
-#ifdef TARGET_POD
-  sr = pod_init();
-#endif
+  sr = hw_init();
 
   cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
   live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
@@ -447,9 +448,7 @@ int main(void)
   mmh.SetMPBHCB(MidiPBHCB);
   
   // GO!
-  #ifdef TARGET_POD
-    pod_start(AudioCallback);
-  #endif
+  hw_start(AudioCallback);
 
   int blink_mask = 511; 
   int blink_cnt = 0;
@@ -461,11 +460,13 @@ int main(void)
   {
     mmh.Process();
 
-  #ifdef TARGET_POD
     hw.ProcessDigitalControls();
+
+  #ifdef TARGET_POD
     UpdateButtons();
-    UpdateEncoder();
   #endif
+
+    UpdateEncoder();
 
     // counter here so we don't do this too often if it's called repeatedly in the main loop
     dly_cnt &= dly_mask;
