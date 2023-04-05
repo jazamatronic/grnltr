@@ -1,3 +1,4 @@
+#pragma once 
 #define OFF	0, 0, 0
 #define RED 	1, 0, 0
 #define GREEN	0, 1, 0

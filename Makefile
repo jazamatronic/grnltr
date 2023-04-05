@@ -2,7 +2,7 @@
 TARGET = grnltr
 
 # Sources
-CPP_SOURCES = grnltr.cpp windows.cpp
+CPP_SOURCES = grnltr.cpp windows.cpp pod.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy
@@ -14,4 +14,6 @@ USE_FATFS = 1
 # Core location, and generic makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
+
+C_DEFS += -DTARGET_POD
 

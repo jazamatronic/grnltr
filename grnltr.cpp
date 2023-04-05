@@ -4,27 +4,31 @@
 //
 #include <stdio.h>
 #include <string.h>
+
+#ifdef TARGET_POD
 #include "daisy_pod.h"
+#include "pod.h"
+#endif
+
 #include "fatfs.h"
 #include "led_colours.h"
 #include "util/wav_format.h"
 #include "Effects/decimator.h"
-#include "PagedParam.h"
+#include "params.h"
 #include "windows.h"
 #include "granulator.h"
 #include "MidiMsgHandler.h"
+#include "grain_envs.h"
+#include "sample_mem.h"
 
 using namespace daisy;
 using namespace daisysp;
 
-static Granulator grnltr;
+//static Granulator grnltr;
+Granulator grnltr;
 static Decimator crush;
-static DaisyPod hw;
-static Parameter knob1, knob2;
-static MidiMsgHandler mmh;
+MidiMsgHandler mmh;
 
-#define GRAIN_ENV_SIZE 1024
-#define NUM_GRAIN_ENVS 6
 float rect_env[GRAIN_ENV_SIZE];
 float gauss_env[GRAIN_ENV_SIZE];
 float hamming_env[GRAIN_ENV_SIZE];
@@ -34,15 +38,9 @@ float rexpo_env[GRAIN_ENV_SIZE];
 float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, expo_env, rexpo_env};
 size_t cur_grain_env = 2; 
 
-#define MAX_WAVES 16
-
-/**< Maximum LFN (set to same in FatFs (ffconf.h) */
-#define WAV_FILENAME_MAX 256 
-
 // 64 MB of memory - how many 16bit samples can we fit in there?
-static int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];
+int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];
 size_t sm_size = sizeof(sm);
-//size_t cur_sm_bytes = 0;
 
 // put a record buffer at the start of memory
 // It should be sizeof(int16_t) * sr * MAX_GRAIN_DUR * MAX_GRAIN_PITCH * 2 in length 
@@ -59,12 +57,10 @@ WavFileInfo wav_file_names[MAX_WAVES];
 uint8_t	    wav_file_count = 0;
 size_t	    wav_start_pos[MAX_WAVES];
 
-#define PARAM_THRESH 0.01f
-static PagedParam pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
-		  grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-		  sample_end_p;
+PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
+	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
+	    sample_end_p;
 
-#define NUM_PAGES 6
 int8_t cur_page = 0;
 int8_t cur_wave = 0;
 
@@ -77,18 +73,7 @@ SdmmcHandler   sd;
 FatFSInterface fsi;
 FIL            SDFile;
 
-struct {
-  float	  GrainPitch;
-  float   ScanRate;
-  float   GrainDur;
-  int32_t GrainDens;
-  float	  ScatterDist;
-  float	  PitchDist;
-  float	  SampleStart;
-  float	  SampleEnd;
-  float	  Crush;
-  float	  DownSample;
-} grnltr_params;
+grnltr_params_t grnltr_params;
 
 #define MIDI_CHANNEL	    0 // todo - make this settable somehow. Daisy starts counting MIDI channels from 0
 #define CC_SCAN	       	    1 // MOD wheel controls Scan Rate
@@ -116,163 +101,9 @@ struct {
 //C3
 #define BASE_NOTE	    60
 
-void UpdateEncoder();
-void UpdateButtons();
 int  ReadWavsFromDir(const char *dir_path);
 void HandleMidiMessage();
 void InitControls();
-inline void Controls();
-
-void UpdateEncoder()
-{
-  cur_page = (int8_t)(cur_page + hw.encoder.Increment());
-  if (cur_page >= NUM_PAGES) { cur_page = 0; }
-  if (cur_page < 0) { cur_page += NUM_PAGES; }
-  switch(cur_page)
-  {
-    case 0:
-      hw.led1.Set(RED);
-      /*
-       * k1 = Grain Pitch
-       * k2 = Scan Rate (disabled in live mode)
-       * b1 = cycle env type
-       * b2 = Reset Grain Pitch and Scan Rate
-       */
-      break;
-    case 1:
-      hw.led1.Set(ORANGE);
-      /*
-       * k1 = Grain Duration
-       * k2 = Grain Density
-       * b1 = Grain Reverse
-       * b2 = Scan Reverse (disabled in live mode)
-       */
-      break;
-    case 2:
-      hw.led1.Set(YELLOW);
-      /*
-       * k1 = Scatter Distance
-       * b1 = Toggle Scatter
-       * b2 = Toggle Freeze
-       */
-      break;
-    case 3:
-      hw.led1.Set(GREEN);
-      /*
-       * k1 = Pitch Distance
-       * b1 = Toggle Random Pitch
-       * b2 = Toggle Random Density
-       */
-      break;
-    case 4:
-      hw.led1.Set(BLUE);
-      /*
-       * NOTE: led flashes blue during start up to indicate file reading
-       * k1 = Sample Start (disabled in live mode) 
-       * k2 = Sample End (disabled in live mode)
-       * b1 = Cycle Wave
-       * b2 = Toggle Wave Loop (disabled in live mode)
-       */
-      break;
-    case 5:
-      hw.led1.Set(PURPLE);
-      /*
-       * k1 = Bit Crush
-       * k2 = Downsample
-       * b1 = Live Mode
-       * b2 = Sample Mode
-       */
-      break;
-    default:
-      break;
-  }
-  hw.UpdateLeds();
-}
-
-void UpdateButtons()
-{
-  switch(cur_page)
-  {
-    case 0:
-      if(hw.button1.RisingEdge()) {
-	cur_grain_env++;
-	if (cur_grain_env == NUM_GRAIN_ENVS) {
-	  cur_grain_env = 0;
-	}
-	grnltr.ChangeEnv(grain_envs[cur_grain_env]);
-      }
-      if(hw.button2.RisingEdge()) {
-	pitch_p.Lock(1.0);
-  	rate_p.Lock(1.0);
-	//got_clock = 0;
-	mmh.ResetGotClock();
-      }
-      break;
-    case 1:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleGrainReverse();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleScanReverse();
-      }
-      break;
-    case 2:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleScatter();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleFreeze();
-      }
-      break;
-    case 3:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleRandomPitch();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleRandomDensity();
-      }
-      break;
-    case 4:
-      if(hw.button1.RisingEdge()) {
-	cur_wave++;
-	if (cur_wave >= wav_file_count) cur_wave = 0;
-	grnltr.Stop();
-	InitControls();
-	grnltr.Reset( \
-	    &sm[wav_start_pos[cur_wave]], \
-	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
-    	grnltr.Dispatch(0);
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleSampleLoop();
-      }
-      break;
-    case 5:
-      if(hw.button1.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-	grnltr.Live( \
-	    &sm[0], \
-	    live_rec_buf_len);
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-/*
- *	grnltr.Reset( \
- *	    &sm[wav_start_pos[cur_wave]], \
- *	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
- */
-	grnltr.Reset( \
-	    &sm[0], \
-	    live_rec_buf_len);
-    	grnltr.Dispatch(0);
-      }
-      break;
-    default:
-      break;
-  }
-}
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -307,8 +138,10 @@ int ReadWavsFromDir(const char *dir_path)
 
   size_t bytesread;
 
+#ifdef TARGET_POD
   hw.led1.Set(GREEN);
   hw.UpdateLeds();
+#endif
 
   // See /data/daisy/DaisyExamples-sm/libDaisy/src/hid/wavplayer.*
   // Open Dir and scan for files.
@@ -337,8 +170,10 @@ int ReadWavsFromDir(const char *dir_path)
   // Now we'll go through each file and load the WavInfo.
   for(size_t i = 0; i < wav_file_count; i++)
   {
+#ifdef TARGET_POD
     hw.led1.Set(BLUE);
     hw.UpdateLeds();
+#endif
     // Read the test file from the SD Card.
     if(f_open(&SDFile, wav_file_names[i].name, FA_READ) == FR_OK)
     {
@@ -358,8 +193,10 @@ int ReadWavsFromDir(const char *dir_path)
 
       f_close(&SDFile);
     }
+#ifdef TARGET_POD
     hw.led1.Set(OFF);
     hw.UpdateLeds();
+#endif
     System::Delay(250);
   }
   return 0;
@@ -387,12 +224,16 @@ void RTStopCB()
 
 void RTBeatCB()
 {
+#ifdef TARGET_POD
   hw.led2.Set(RED);
+#endif
 }
 
 void RTHalfBeatCB()
 {
+#ifdef TARGET_POD
   hw.led2.Set(OFF);
+#endif
 }
 
 void MidiCCHCB(uint8_t cc, uint8_t val)
@@ -519,27 +360,6 @@ void InitControls()
   downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
 }
 
-inline void Controls()
-{
-  float k1, k2;
-
-  k1 = knob1.Process();
-  k2 = knob2.Process();
-  
-  grnltr_params.GrainPitch =   pitch_p.Process(k1, cur_page);
-  if (mmh.GotClock()) {
-    rate_p.Set((mmh.GetBPM() / sample_bpm));
-  }
-  grnltr_params.ScanRate =     rate_p.Process(k2, cur_page);
-  grnltr_params.GrainDur =     grain_duration_p.Process(k1, cur_page);
-  grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
-  grnltr_params.ScatterDist =  scatter_dist_p.Process(k1, cur_page);
-  grnltr_params.PitchDist =    pitch_dist_p.Process(k1, cur_page);
-  grnltr_params.SampleStart =  sample_start_p.Process(k1, cur_page);
-  grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
-  grnltr_params.Crush =        crush_p.Process(k1, cur_page);
-  grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
-}
 
 int main(void)
 {
@@ -550,13 +370,17 @@ int main(void)
   expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
   
   // Init hardware
-  hw.Init();
-  sr = hw.AudioSampleRate();
+#ifdef TARGET_POD
+  sr = pod_init();
+#endif
+
   cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
   live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
   
+#ifdef TARGET_POD
   hw.led1.Set(RED);
   hw.UpdateLeds();
+#endif
 
   // Init SD Card
   SdmmcHandler::Config sd_cfg;
@@ -565,16 +389,20 @@ int main(void)
   
   System::Delay(250);
   
+#ifdef TARGET_POD
   hw.led1.Set(ORANGE);
   hw.UpdateLeds();
+#endif
   
   // Links libdaisy i/o to fatfs driver.
   fsi.Init(FatFSInterface::Config::MEDIA_SD);
   
   System::Delay(250);
   
+#ifdef TARGET_POD
   hw.led1.Set(YELLOW);
   hw.UpdateLeds();
+#endif
   
   // Mount SD Card
   f_mount(&fsi.GetSDFileSystem(), "/", 1);
@@ -588,8 +416,10 @@ int main(void)
   
   System::Delay(250);
   
+#ifdef TARGET_POD
   hw.led1.Set(PURPLE);
   hw.UpdateLeds();
+#endif
   
   grnltr.Init(sr, \
       &sm[wav_start_pos[cur_wave]], \
@@ -601,9 +431,6 @@ int main(void)
   crush.Init();
   crush.SetDownsampleFactor(0.0f);
 
-  knob1.Init(hw.knob1, 0.0f, 1.0f, knob1.LINEAR);
-  knob2.Init(hw.knob2, 0.0f, 1.0f, knob2.LINEAR);
-  
   InitControls();
 
   // Setup Midi and Callbacks
@@ -620,9 +447,9 @@ int main(void)
   mmh.SetMPBHCB(MidiPBHCB);
   
   // GO!
-  hw.StartAdc();
-  hw.StartAudio(AudioCallback);
-  hw.midi.StartReceive();
+  #ifdef TARGET_POD
+    pod_start(AudioCallback);
+  #endif
 
   int blink_mask = 511; 
   int blink_cnt = 0;
@@ -634,9 +461,11 @@ int main(void)
   {
     mmh.Process();
 
+  #ifdef TARGET_POD
     hw.ProcessDigitalControls();
     UpdateButtons();
     UpdateEncoder();
+  #endif
 
     // counter here so we don't do this too often if it's called repeatedly in the main loop
     dly_cnt &= dly_mask;
@@ -645,7 +474,9 @@ int main(void)
 
       blink_cnt &= blink_mask;
       if (blink_cnt == 0) {
+#ifdef TARGET_POD
         hw.seed.SetLed(led_state);
+#endif
         led_state = !led_state;
       }
       blink_cnt++;

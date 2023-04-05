@@ -2,6 +2,14 @@
 
 #define SPM 60.0f
 
+#ifdef TARGET_POD
+#include "daisy_pod.h"
+#include "pod.h"
+#endif
+
+
+using namespace daisy;
+
 class MidiMsgHandler
 {
   public:
