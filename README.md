@@ -32,62 +32,14 @@ MIDI parameters are accepted no matter what page is currently active.
 Knobs and MIDI CC messages are in "catch" mode.  
 For Toggle parameters, send any CC value to toggle.
 
-k1 = knob1, b1 = button1 etc.  
-
-RED = Pitch/Time page  
-&nbsp;&nbsp;k1 = Grain Pitch -2 8va to +2 8va  
-&nbsp;&nbsp;&nbsp;&nbsp;CC3 and Pitch Bend  
-&nbsp;&nbsp;k2 = Scan Rate\*  
-&nbsp;&nbsp;&nbsp;&nbsp;CC1  
-&nbsp;&nbsp;b1 = cycle env type  
-&nbsp;&nbsp;b2 = Reset Grain Pitch and Scan Rate  
-        
-ORANGE = Grain Duration/Density page  
-&nbsp;&nbsp;k1 = Grain Duration 10mS to 200mS  
-&nbsp;&nbsp;&nbsp;&nbsp;CC9  
-&nbsp;&nbsp;k2 = Grain Density  2 per second to 200 per second  
-&nbsp;&nbsp;&nbsp;&nbsp;CC14  
-&nbsp;&nbsp;b1 = Grain Reverse  
-&nbsp;&nbsp;&nbsp;&nbsp;CC25  
-&nbsp;&nbsp;b2 = Scan Reverse\*  
-&nbsp;&nbsp;&nbsp;&nbsp;CC26  
-        
-YELLOW = Grain Scatter page  
-&nbsp;&nbsp;k1 = Scatter Distance  
-&nbsp;&nbsp;&nbsp;&nbsp;CC20  
-&nbsp;&nbsp;b1 = Toggle Scatter  
-&nbsp;&nbsp;&nbsp;&nbsp;CC15  
-&nbsp;&nbsp;b2 = Toggle Freeze  
-&nbsp;&nbsp;&nbsp;&nbsp;CC27  
-        
-GREEN = Random Grain Pitch page  
-&nbsp;&nbsp;k1 = Pitch Distance  
-&nbsp;&nbsp;&nbsp;&nbsp;CC22  
-&nbsp;&nbsp;b1 = Toggle Random Pitch  
-&nbsp;&nbsp;&nbsp;&nbsp;CC21  
-        
-BLUE = WAV selection page  
-&nbsp;&nbsp;NOTE: led flashes blue during start up to indicate file reading  
-&nbsp;&nbsp;k1 = Sample Start\*  
-&nbsp;&nbsp;&nbsp;&nbsp;CC12 - Coarse  
-&nbsp;&nbsp;&nbsp;&nbsp;CC44 - Fine  
-&nbsp;&nbsp;k2 = Sample End\*  
-&nbsp;&nbsp;&nbsp;&nbsp;CC13 - Coarse  
-&nbsp;&nbsp;&nbsp;&nbsp;CC45 - Fine  
-&nbsp;&nbsp;b1 = Cycle Wave  
-&nbsp;&nbsp;&nbsp;&nbsp;NoteOn - Note 60 (C3) upwards  
-&nbsp;&nbsp;b2 = Toggle Wave Loop\*  
-&nbsp;&nbsp;&nbsp;&nbsp;CC28  
-        
-PURPLE = Decimator page  
-&nbsp;&nbsp;k1 = Bit Crush  
-&nbsp;&nbsp;&nbsp;&nbsp;CC23  
-&nbsp;&nbsp;k2 = Downsample  
-&nbsp;&nbsp;&nbsp;&nbsp;CC24  
-&nbsp;&nbsp;b1 = Live Rec Mode  
-&nbsp;&nbsp;&nbsp;&nbsp;CC31  
-&nbsp;&nbsp;b2 = Play Rec Buffer  
-&nbsp;&nbsp;&nbsp;&nbsp;CC32  
+| LED Colour | Page | Knob1 | Knob2 | Button1 | Button2 |
+| ---------- | ---- | ----- | ----- | ------- | ------- |
+| RED | Pitch/Time | Grain Pitch (-2 8va to +2 8va)<br> CC3 and Pitch Bend | Scan Rate\*<br> CC1 | Cycle env type | Reset Grain Pitch and Scan Rate |
+| ORANGE | Grain Duration/Density | Grain Duration (10 to 200mS)<br> CC9 | Grain Density (2 to 200 per second)<br> CC14 | Grain Reverse<br> CC25 | Scan Reverse\*<br> CC26 |
+| YELLOW | Grain Scatter | Scatter Distance<br> CC20 | N/A | Toggle Scatter<br> CC15 | Toggle Freeze<br> CC27 |
+| GREEN | Randomize | Pitch Distance<br> CC22 | N/A | Toggle Random Pitch<br> CC21 | Toggle Random Density<br> CC29 |
+| BLUE | WAV Select | Sample Start\*<br> CC12 Coarse, CC44 Fine | Sample End\*<br> CC13 Coarse, CC45 Fine | Cycle Wave<br> NoteOn - From Note 60 (C3) | Toggle Wave Loop\*<br> CC28 |
+| PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | Live Rec Mode<br> CC31 | Play Rec Buffer<br> CC32 |
 
 Parameters marked with a \* are disabled in live record mode.
         

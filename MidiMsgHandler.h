@@ -13,6 +13,7 @@
 
 using namespace daisy;
 
+template <typename T>
 class MidiMsgHandler
 {
   public:
@@ -80,7 +81,7 @@ class MidiMsgHandler
       }
     }
 
-    void SetHWHandle(HW_TYPE *hw)
+    void SetHWHandle(T *hw)
     {
       hw_handle_ = hw;
       tick_dur_ = 1.0f / (2 * hw_handle_->seed.system.GetPClk1Freq());
@@ -202,7 +203,7 @@ class MidiMsgHandler
     }
 
   private:
-    HW_TYPE *hw_handle_;
+    T *hw_handle_;
     int ppqn_ = 24;
     int channel_ = 0;
     int ppqn_count_ = 0;

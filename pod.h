@@ -16,7 +16,7 @@ extern int8_t cur_wave;
 extern float sample_bpm;
 extern float sr;
 extern Granulator grnltr;
-extern MidiMsgHandler mmh;
+extern MidiMsgHandler<HW_TYPE> mmh;
 extern DaisyPod hw;
 
 float hw_init();

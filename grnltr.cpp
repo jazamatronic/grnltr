@@ -30,7 +30,7 @@ using namespace daisysp;
 //static Granulator grnltr;
 Granulator grnltr;
 static Decimator crush;
-MidiMsgHandler mmh;
+MidiMsgHandler<HW_TYPE> mmh;
 
 float rect_env[GRAIN_ENV_SIZE];
 float gauss_env[GRAIN_ENV_SIZE];
@@ -427,11 +427,11 @@ int main(void)
   mmh.SetChannel(MIDI_CHANNEL);
   mmh.SetHWHandle(&hw);
 
-  mmh.SetSRTCB(MidiMsgHandler::Start,	  RTStartCB);
-  mmh.SetSRTCB(MidiMsgHandler::Continue,  RTContCB);
-  mmh.SetSRTCB(MidiMsgHandler::Stop,	  RTStopCB);
-  mmh.SetSRTCB(MidiMsgHandler::Beat, 	  RTBeatCB);
-  mmh.SetSRTCB(MidiMsgHandler::HalfBeat,  RTHalfBeatCB);
+  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Start,	  RTStartCB);
+  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Continue, RTContCB);
+  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Stop,	  RTStopCB);
+  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Beat, 	  RTBeatCB);
+  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::HalfBeat, RTHalfBeatCB);
   mmh.SetMNOHCB(MidiNOHCB);
   mmh.SetMCCHCB(MidiCCHCB);
   mmh.SetMPBHCB(MidiPBHCB);

@@ -18,7 +18,7 @@ extern int8_t cur_wave;
 extern float sample_bpm;
 extern float sr;
 extern Granulator grnltr;
-extern MidiMsgHandler mmh;
+extern MidiMsgHandler<HW_TYPE> mmh;
 extern kxmx::Bluemchen hw;
 
 float hw_init();
