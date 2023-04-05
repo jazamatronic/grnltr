@@ -4,63 +4,34 @@
 kxmx::Bluemchen hw;
 static Parameter knob1, knob2;
 
+char strings[][MAX_STRING] = {"RED", "YELLOW", "ORANGE", "GREEN", "BLUE"};
+
 void UpdateEncoder()
 {
   cur_page = (int8_t)(cur_page + hw.encoder.Increment());
   if (cur_page >= NUM_PAGES) { cur_page = 0; }
   if (cur_page < 0) { cur_page += NUM_PAGES; }
-  switch(cur_page)
-  {
-    case 0:
-      /*
-       * k1 = Grain Pitch
-       * k2 = Scan Rate (disabled in live mode)
-       * b1 = cycle env type
-       * b2 = Reset Grain Pitch and Scan Rate
-       */
-      break;
-    case 1:
-      /*
-       * k1 = Grain Duration
-       * k2 = Grain Density
-       * b1 = Grain Reverse
-       * b2 = Scan Reverse (disabled in live mode)
-       */
-      break;
-    case 2:
-      /*
-       * k1 = Scatter Distance
-       * b1 = Toggle Scatter
-       * b2 = Toggle Freeze
-       */
-      break;
-    case 3:
-      /*
-       * k1 = Pitch Distance
-       * b1 = Toggle Random Pitch
-       * b2 = Toggle Random Density
-       */
-      break;
-    case 4:
-      /*
-       * NOTE: led flashes blue during start up to indicate file reading
-       * k1 = Sample Start (disabled in live mode) 
-       * k2 = Sample End (disabled in live mode)
-       * b1 = Cycle Wave
-       * b2 = Toggle Wave Loop (disabled in live mode)
-       */
-      break;
-    case 5:
-      /*
-       * k1 = Bit Crush
-       * k2 = Downsample
-       * b1 = Live Mode
-       * b2 = Sample Mode
-       */
-      break;
-    default:
-      break;
+
+  if(hw.encoder.RisingEdge()) {
+    cur_wave++;
+    if (cur_wave >= wav_file_count) cur_wave = 0;
+    grnltr.Stop();
+    InitControls();
+    grnltr.Reset( \
+        &sm[wav_start_pos[cur_wave]], \
+        wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+    grnltr.Dispatch(0);
   }
+}
+
+void UpdateScreen()
+{
+  hw.display.Fill(false);
+
+  hw.display.SetCursor(0, 0);
+  hw.display.WriteString(&strings[cur_page][0], Font_6x8, true);
+
+  hw.display.Update();
 }
 
 /*
@@ -144,6 +115,20 @@ void UpdateButtons()
   }
 }
 */
+
+void InitControls()
+{
+  pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	MIN_GRAIN_PITCH,  MAX_GRAIN_PITCH,  PARAM_THRESH);
+  rate_p.Init(            0,  DEFAULT_SCAN_RATE,        MIN_SCAN_RATE,	  MAX_SCAN_RATE,    PARAM_THRESH);
+  grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        MIN_GRAIN_DUR,    MAX_GRAIN_DUR,    PARAM_THRESH);
+  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENS,  sr/MIN_GRAIN_DENS, sr/MAX_GRAIN_DENS, PARAM_THRESH);
+  scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	0.0f,   1.0f, PARAM_THRESH);
+  pitch_dist_p.Init(      2,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
+  sample_start_p.Init(    3,  0.0f,			0.0f,   1.0f, PARAM_THRESH);
+  sample_end_p.Init(	  3,  1.0f,			0.0f,   1.0f, PARAM_THRESH);
+  crush_p.Init(           4,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
+  downsample_p.Init(      4,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
+}
 
 void Controls()
 {

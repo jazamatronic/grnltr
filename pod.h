@@ -14,6 +14,7 @@
 extern int8_t cur_page;
 extern int8_t cur_wave;
 extern float sample_bpm;
+extern float sr;
 extern Granulator grnltr;
 extern MidiMsgHandler mmh;
 extern DaisyPod hw;
@@ -22,5 +23,5 @@ float hw_init();
 void hw_start(AudioHandle::AudioCallback cb);
 void UpdateEncoder();
 void UpdateButtons();
+void InitControls();
 void Controls();
-extern void InitControls();
