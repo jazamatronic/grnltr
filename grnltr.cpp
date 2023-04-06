@@ -21,8 +21,7 @@
 #include "windows.h"
 #include "granulator.h"
 #include "MidiMsgHandler.h"
-#include "grain_envs.h"
-#include "sample_mem.h"
+#include "EventQueue.h"
 
 using namespace daisy;
 using namespace daisysp;
@@ -31,6 +30,10 @@ using namespace daisysp;
 Granulator grnltr;
 static Decimator crush;
 MidiMsgHandler<HW_TYPE> mmh;
+EventQueue<QUEUE_LENGTH> eq;
+
+#define GRAIN_ENV_SIZE 1024
+#define NUM_GRAIN_ENVS 6
 
 float rect_env[GRAIN_ENV_SIZE];
 float gauss_env[GRAIN_ENV_SIZE];
@@ -40,6 +43,11 @@ float expo_env[GRAIN_ENV_SIZE];
 float rexpo_env[GRAIN_ENV_SIZE];
 float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, expo_env, rexpo_env};
 size_t cur_grain_env = 2; 
+
+#define MAX_WAVES 16
+
+/**< Maximum LFN (set to same in FatFs (ffconf.h) */
+#define WAV_FILENAME_MAX 256 
 
 // 64 MB of memory - how many 16bit samples can we fit in there?
 int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];
@@ -63,6 +71,8 @@ size_t	    wav_start_pos[MAX_WAVES];
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p;
+
+#define NUM_PAGES 6
 
 int8_t cur_page = 0;
 int8_t cur_wave = 0;
@@ -103,6 +113,9 @@ grnltr_params_t grnltr_params;
 #define	CC_LIVE_SAMP	    32
 //C3
 #define BASE_NOTE	    60
+
+// 33mS - something like 30Hz
+#define MAIN_LOOP_DLY	   33 
 
 int  ReadWavsFromDir(const char *dir_path);
 void HandleMidiMessage();
@@ -349,6 +362,81 @@ void MidiNOHCB(uint8_t n, uint8_t vel)
   }
 }
 
+void process_events()
+{
+  EventQueue<QUEUE_LENGTH>::event_entry ev = eq.pull_event();
+  switch(ev.ev) {
+    case EventQueue<QUEUE_LENGTH>::PAGE_UP:
+      cur_page++;
+      if (cur_page >= NUM_PAGES) { cur_page = 0; }
+      break;
+    case EventQueue<QUEUE_LENGTH>::PAGE_DN:
+      cur_page--;
+      if (cur_page < 0) { cur_page += NUM_PAGES; }
+      break;
+    case EventQueue<QUEUE_LENGTH>::INCR_GRAIN_ENV:
+      cur_grain_env++;
+      if (cur_grain_env == NUM_GRAIN_ENVS) {
+        cur_grain_env = 0;
+      }
+      grnltr.ChangeEnv(grain_envs[cur_grain_env]);
+      break;
+    case EventQueue<QUEUE_LENGTH>::RST_PITCH_SCAN:
+      pitch_p.Lock(1.0);
+      rate_p.Lock(1.0);
+      mmh.ResetGotClock();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_GRAIN_REV:
+      grnltr.ToggleGrainReverse();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_SCAN_REV:
+      grnltr.ToggleScanReverse();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_SCAT:
+      grnltr.ToggleScatter();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_FREEZE:
+      grnltr.ToggleFreeze();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_RND_PITCH:
+      grnltr.ToggleRandomPitch();
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_RND_DENS:
+      grnltr.ToggleRandomDensity();
+      break;
+    case EventQueue<QUEUE_LENGTH>::INCR_WAV:
+      cur_wave++;
+      if (cur_wave >= wav_file_count) cur_wave = 0;
+      grnltr.Stop();
+      InitControls();
+      grnltr.Reset( \
+          &sm[wav_start_pos[cur_wave]], \
+          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+      grnltr.Dispatch(0);
+      break;
+    case EventQueue<QUEUE_LENGTH>::TOG_LOOP:
+      grnltr.ToggleSampleLoop();
+      break;
+    case EventQueue<QUEUE_LENGTH>::LIVE_REC:
+      grnltr.Stop();
+      InitControls();
+      grnltr.Live( \
+          &sm[0], \
+          live_rec_buf_len);
+      break;
+    case EventQueue<QUEUE_LENGTH>::LIVE_PLAY:
+      grnltr.Stop();
+      InitControls();
+      grnltr.Reset( \
+          &sm[0], \
+          live_rec_buf_len);
+      grnltr.Dispatch(0);
+      break;
+    default:
+      break;
+  }
+}
+
 int main(void)
 {
   rectangular_window(rect_env, GRAIN_ENV_SIZE);
@@ -438,11 +526,16 @@ int main(void)
   
   // GO!
   hw_start(AudioCallback);
+  hw.ProcessDigitalControls();
+  while (eq.has_event()) {
+    eq.pull_event();
+  }
+  UpdateUI(cur_page);
 
-  int blink_mask = 511; 
+  int blink_mask = 15; 
   int blink_cnt = 0;
-  int dly_mask = 255;
-  int dly_cnt = 0;
+  uint32_t now = hw.seed.system.GetNow();
+  uint32_t loop_dly = now;
 
   bool led_state = true;
   for(;;)
@@ -450,21 +543,21 @@ int main(void)
     mmh.Process();
 
     hw.ProcessDigitalControls();
-
-  #ifdef TARGET_POD
-    UpdateButtons();
-  #endif
-
     UpdateEncoder();
 
-    // counter here so we don't do this too often if it's called repeatedly in the main loop
-    dly_cnt &= dly_mask;
-    if (dly_cnt == 0) {
-      Controls();
+    #ifdef TARGET_POD
+    UpdateButtons(cur_page);
+    #endif
 
-      #ifdef TARGET_BLUEMCHEN
-      UpdateScreen();
-      #endif
+    while (eq.has_event()) {
+      process_events();
+    }
+    UpdateUI(cur_page);
+
+    // counter here so we don't do this too often if it's called repeatedly in the main loop
+    now = hw.seed.system.GetNow();
+    if ((now - loop_dly > MAIN_LOOP_DLY) || (now < loop_dly)) {
+      Controls(cur_page);
 
       blink_cnt &= blink_mask;
       if (blink_cnt == 0) {
@@ -474,7 +567,7 @@ int main(void)
         led_state = !led_state;
       }
       blink_cnt++;
+      loop_dly = now;
     } 
-    dly_cnt++;
   }
 }

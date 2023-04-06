@@ -1,120 +1,42 @@
 #include "kxmx_bluemchen.h"
 #include "bluemchen.h"
+#include "EventQueue.h"
 
 kxmx::Bluemchen hw;
 static Parameter knob1, knob2;
+uint8_t last_ui_update = 0;
 
-char strings[][MAX_STRING] = {"RED", "YELLOW", "ORANGE", "GREEN", "BLUE"};
+char strings[][MAX_STRING] = {"RED", "ORANGE", "YELLOW", "GREEN", "BLUE", "PURPLE"};
 
 void UpdateEncoder()
 {
-  cur_page = (int8_t)(cur_page + hw.encoder.Increment());
-  if (cur_page >= NUM_PAGES) { cur_page = 0; }
-  if (cur_page < 0) { cur_page += NUM_PAGES; }
-
   if(hw.encoder.RisingEdge()) {
-    cur_wave++;
-    if (cur_wave >= wav_file_count) cur_wave = 0;
-    grnltr.Stop();
-    InitControls();
-    grnltr.Reset( \
-        &sm[wav_start_pos[cur_wave]], \
-        wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
-    grnltr.Dispatch(0);
+    eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_WAV, 0);
+  }
+
+  int32_t incr = hw.encoder.Increment();
+
+  if (incr == 0) { return; }
+  (incr > 0) ? \
+    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_UP, 0) : \
+    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_DN, 0);
+}
+
+void UpdateUI(int8_t cur_page)
+{
+  // limit update rate
+  uint32_t now = hw.seed.system.GetNow();
+  if (last_ui_update - now >= 30) {
+    last_ui_update = now;
+
+    hw.display.Fill(false);
+
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(&strings[cur_page][0], Font_6x8, true);
+
+    hw.display.Update();
   }
 }
-
-void UpdateScreen()
-{
-  hw.display.Fill(false);
-
-  hw.display.SetCursor(0, 0);
-  hw.display.WriteString(&strings[cur_page][0], Font_6x8, true);
-
-  hw.display.Update();
-}
-
-/*
-void UpdateButtons()
-{
-  switch(cur_page)
-  {
-    case 0:
-      if(hw.button1.RisingEdge()) {
-	cur_grain_env++;
-	if (cur_grain_env == NUM_GRAIN_ENVS) {
-	  cur_grain_env = 0;
-	}
-	grnltr.ChangeEnv(grain_envs[cur_grain_env]);
-      }
-      if(hw.button2.RisingEdge()) {
-	pitch_p.Lock(1.0);
-  	rate_p.Lock(1.0);
-	mmh.ResetGotClock();
-      }
-      break;
-    case 1:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleGrainReverse();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleScanReverse();
-      }
-      break;
-    case 2:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleScatter();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleFreeze();
-      }
-      break;
-    case 3:
-      if(hw.button1.RisingEdge()) {
-	grnltr.ToggleRandomPitch();
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleRandomDensity();
-      }
-      break;
-    case 4:
-      if(hw.button1.RisingEdge()) {
-	cur_wave++;
-	if (cur_wave >= wav_file_count) cur_wave = 0;
-	grnltr.Stop();
-	InitControls();
-	grnltr.Reset( \
-	    &sm[wav_start_pos[cur_wave]], \
-	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
-    	grnltr.Dispatch(0);
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.ToggleSampleLoop();
-      }
-      break;
-    case 5:
-      if(hw.button1.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-	grnltr.Live( \
-	    &sm[0], \
-	    live_rec_buf_len);
-      }
-      if(hw.button2.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-
-	grnltr.Reset( \
-	    &sm[0], \
-	    live_rec_buf_len);
-    	grnltr.Dispatch(0);
-      }
-      break;
-    default:
-      break;
-  }
-}
-*/
 
 void InitControls()
 {
@@ -130,7 +52,7 @@ void InitControls()
   downsample_p.Init(      4,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
 }
 
-void Controls()
+void Controls(int8_t cur_page)
 {
   float k1, k2;
 

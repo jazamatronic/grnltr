@@ -1,148 +1,143 @@
 #include "pod.h"
 #include "led_colours.h"
+#include "EventQueue.h"
 
 DaisyPod hw;
 static Parameter knob1, knob2;
+uint8_t last_ui_update = 0;
 
 void UpdateEncoder()
 {
-  cur_page = (int8_t)(cur_page + hw.encoder.Increment());
-  if (cur_page >= NUM_PAGES) { cur_page = 0; }
-  if (cur_page < 0) { cur_page += NUM_PAGES; }
-  switch(cur_page)
-  {
-    case 0:
-      hw.led1.Set(RED);
-      /*
-       * k1 = Grain Pitch
-       * k2 = Scan Rate (disabled in live mode)
-       * b1 = cycle env type
-       * b2 = Reset Grain Pitch and Scan Rate
-       */
-      break;
-    case 1:
-      hw.led1.Set(ORANGE);
-      /*
-       * k1 = Grain Duration
-       * k2 = Grain Density
-       * b1 = Grain Reverse
-       * b2 = Scan Reverse (disabled in live mode)
-       */
-      break;
-    case 2:
-      hw.led1.Set(YELLOW);
-      /*
-       * k1 = Scatter Distance
-       * b1 = Toggle Scatter
-       * b2 = Toggle Freeze
-       */
-      break;
-    case 3:
-      hw.led1.Set(GREEN);
-      /*
-       * k1 = Pitch Distance
-       * b1 = Toggle Random Pitch
-       * b2 = Toggle Random Density
-       */
-      break;
-    case 4:
-      hw.led1.Set(BLUE);
-      /*
-       * NOTE: led flashes blue during start up to indicate file reading
-       * k1 = Sample Start (disabled in live mode) 
-       * k2 = Sample End (disabled in live mode)
-       * b1 = Cycle Wave
-       * b2 = Toggle Wave Loop (disabled in live mode)
-       */
-      break;
-    case 5:
-      hw.led1.Set(PURPLE);
-      /*
-       * k1 = Bit Crush
-       * k2 = Downsample
-       * b1 = Live Mode
-       * b2 = Sample Mode
-       */
-      break;
-    default:
-      break;
+  if(hw.encoder.RisingEdge()) {
+    eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_WAV, 0);
   }
-  hw.UpdateLeds();
+
+  int32_t incr = hw.encoder.Increment();
+
+  if (incr == 0) { return; }
+  (incr > 0) ? \
+    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_UP, 0) : \
+    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_DN, 0);
 }
 
-void UpdateButtons()
+void UpdateUI(int8_t cur_page)
+{
+  // limit update rate
+  uint32_t now = hw.seed.system.GetNow();
+  if (last_ui_update - now >= 1) {
+    last_ui_update = now;
+
+    switch(cur_page)
+    {
+      case 0:
+        hw.led1.Set(RED);
+        /*
+         * k1 = Grain Pitch
+         * k2 = Scan Rate (disabled in live mode)
+         * b1 = cycle env type
+         * b2 = Reset Grain Pitch and Scan Rate
+         */
+        break;
+      case 1:
+        hw.led1.Set(ORANGE);
+        /*
+         * k1 = Grain Duration
+         * k2 = Grain Density
+         * b1 = Grain Reverse
+         * b2 = Scan Reverse (disabled in live mode)
+         */
+        break;
+      case 2:
+        hw.led1.Set(YELLOW);
+        /*
+         * k1 = Scatter Distance
+         * b1 = Toggle Scatter
+         * b2 = Toggle Freeze
+         */
+        break;
+      case 3:
+        hw.led1.Set(GREEN);
+        /*
+         * k1 = Pitch Distance
+         * b1 = Toggle Random Pitch
+         * b2 = Toggle Random Density
+         */
+        break;
+      case 4:
+        hw.led1.Set(BLUE);
+        /*
+         * NOTE: led flashes blue during start up to indicate file reading
+         * k1 = Sample Start (disabled in live mode) 
+         * k2 = Sample End (disabled in live mode)
+         * b1 = Live Mode
+         * b2 = Sample Mode
+         */
+        break;
+      case 5:
+        hw.led1.Set(PURPLE);
+        /*
+         * k1 = Bit Crush
+         * k2 = Downsample
+         * b1 = Toggle Wave Loop (disabled in live mode)
+         */
+        break;
+      default:
+        hw.led1.Set(WHITE);
+        break;
+    }
+    hw.UpdateLeds();
+  }
+}
+
+void UpdateButtons(int8_t cur_page)
 {
   switch(cur_page)
   {
     case 0:
       if(hw.button1.RisingEdge()) {
-	cur_grain_env++;
-	if (cur_grain_env == NUM_GRAIN_ENVS) {
-	  cur_grain_env = 0;
-	}
-	grnltr.ChangeEnv(grain_envs[cur_grain_env]);
+	eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_GRAIN_ENV, 0);
       }
       if(hw.button2.RisingEdge()) {
-	pitch_p.Lock(1.0);
-  	rate_p.Lock(1.0);
-	mmh.ResetGotClock();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::RST_PITCH_SCAN, 0);
       }
       break;
     case 1:
       if(hw.button1.RisingEdge()) {
-	grnltr.ToggleGrainReverse();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_GRAIN_REV, 0);
       }
       if(hw.button2.RisingEdge()) {
-	grnltr.ToggleScanReverse();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_SCAN_REV, 0);
       }
       break;
     case 2:
       if(hw.button1.RisingEdge()) {
-	grnltr.ToggleScatter();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_SCAT, 0);
       }
       if(hw.button2.RisingEdge()) {
-	grnltr.ToggleFreeze();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_FREEZE, 0);
       }
       break;
     case 3:
       if(hw.button1.RisingEdge()) {
-	grnltr.ToggleRandomPitch();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_RND_PITCH, 0);
       }
       if(hw.button2.RisingEdge()) {
-	grnltr.ToggleRandomDensity();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_RND_DENS, 0);
       }
       break;
     case 4:
       if(hw.button1.RisingEdge()) {
-	cur_wave++;
-	if (cur_wave >= wav_file_count) cur_wave = 0;
-	grnltr.Stop();
-	InitControls();
-	grnltr.Reset( \
-	    &sm[wav_start_pos[cur_wave]], \
-	    wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
-    	grnltr.Dispatch(0);
+	eq.push_event(EventQueue<QUEUE_LENGTH>::LIVE_REC, 0);
       }
       if(hw.button2.RisingEdge()) {
-	grnltr.ToggleSampleLoop();
+	eq.push_event(EventQueue<QUEUE_LENGTH>::LIVE_PLAY, 0);
       }
       break;
     case 5:
       if(hw.button1.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-	grnltr.Live( \
-	    &sm[0], \
-	    live_rec_buf_len);
+	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_LOOP, 0);
       }
       if(hw.button2.RisingEdge()) {
-	grnltr.Stop();
-	InitControls();
-
-	grnltr.Reset( \
-	    &sm[0], \
-	    live_rec_buf_len);
-    	grnltr.Dispatch(0);
       }
       break;
     default:
@@ -164,7 +159,7 @@ void InitControls()
   downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
 }
 
-void Controls()
+void Controls(int8_t cur_page)
 {
   float k1, k2;
 
