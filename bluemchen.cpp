@@ -30,7 +30,7 @@ void UpdateEncoder(int8_t cur_page)
     }
   }
 
-  if(hw.encoder.RisingEdge()) {
+  if(hw.encoder.FallingEdge()) {
     if (long_press) {
       long_press = false;
     } else {

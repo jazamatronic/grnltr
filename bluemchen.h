@@ -12,7 +12,6 @@
 #define LONG_PRESS 512
 
 extern float sample_bpm;
-extern float sr;
 extern MidiMsgHandler<HW_TYPE> mmh;
 extern EventQueue<QUEUE_LENGTH> eq;
 

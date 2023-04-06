@@ -8,7 +8,6 @@
 #include "EventQueue.h"
 
 extern float sample_bpm;
-extern float sr;
 extern MidiMsgHandler<HW_TYPE> mmh;
 extern EventQueue<QUEUE_LENGTH> eq;
 
