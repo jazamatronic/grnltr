@@ -19,5 +19,4 @@ void hw_start(AudioHandle::AudioCallback cb);
 void UpdateEncoder(int8_t cur_page);
 void UpdateUI(int8_t cur_page);
 void UpdateButtons(int8_t cur_page);
-void InitControls();
 void Controls(int8_t cur_page);

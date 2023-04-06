@@ -76,20 +76,6 @@ void UpdateUI(int8_t cur_page)
   }
 }
 
-void InitControls()
-{
-  pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	MIN_GRAIN_PITCH,  MAX_GRAIN_PITCH,  PARAM_THRESH);
-  rate_p.Init(            0,  DEFAULT_SCAN_RATE,        MIN_SCAN_RATE,	  MAX_SCAN_RATE,    PARAM_THRESH);
-  grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        MIN_GRAIN_DUR,    MAX_GRAIN_DUR,    PARAM_THRESH);
-  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENS,  sr/MIN_GRAIN_DENS, sr/MAX_GRAIN_DENS, PARAM_THRESH);
-  scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	0.0f,   1.0f, PARAM_THRESH);
-  pitch_dist_p.Init(      2,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
-  sample_start_p.Init(    3,  0.0f,			0.0f,   1.0f, PARAM_THRESH);
-  sample_end_p.Init(	  3,  1.0f,			0.0f,   1.0f, PARAM_THRESH);
-  crush_p.Init(           4,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
-  downsample_p.Init(      4,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
-}
-
 void Controls(int8_t cur_page)
 {
   float k1, k2;
