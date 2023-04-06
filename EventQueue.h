@@ -24,7 +24,8 @@ class EventQueue
     INCR_WAV,
     TOG_LOOP,
     LIVE_REC,
-    LIVE_PLAY
+    LIVE_PLAY,
+    NONE
   };
 
   struct event_entry {

@@ -4,9 +4,9 @@
 
 DaisyPod hw;
 static Parameter knob1, knob2;
-uint8_t last_ui_update = 0;
+uint32_t last_ui_update = 0;
 
-void UpdateEncoder()
+void UpdateEncoder(int8_t cur_page)
 {
   if(hw.encoder.RisingEdge()) {
     eq.push_event(eq.INCR_WAV, 0);

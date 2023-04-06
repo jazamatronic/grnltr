@@ -9,6 +9,8 @@
 
 #define MAX_STRING 12
 
+#define LONG_PRESS 512
+
 extern float sample_bpm;
 extern float sr;
 extern MidiMsgHandler<HW_TYPE> mmh;
@@ -18,7 +20,13 @@ extern kxmx::Bluemchen hw;
 
 float hw_init();
 void hw_start(AudioHandle::AudioCallback cb);
-void UpdateEncoder();
+void UpdateEncoder(int8_t cur_page);
 void UpdateUI(int8_t cur_page);
 void InitControls();
 void Controls(int8_t cur_page);
+
+typedef struct {
+  char const *page;
+  char const *param[2];
+  EventQueue<QUEUE_LENGTH>::event events[2];
+} page_t;

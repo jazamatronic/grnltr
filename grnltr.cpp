@@ -72,8 +72,6 @@ PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p;
 
-#define NUM_PAGES 6
-
 int8_t cur_page = 0;
 int8_t cur_wave = 0;
 
@@ -423,6 +421,7 @@ void process_events()
           live_rec_buf_len);
       grnltr.Dispatch(0);
       break;
+    case eq.NONE:
     default:
       break;
   }
@@ -534,7 +533,7 @@ int main(void)
     mmh.Process();
 
     hw.ProcessDigitalControls();
-    UpdateEncoder();
+    UpdateEncoder(cur_page);
 
     #ifdef TARGET_POD
     UpdateButtons(cur_page);

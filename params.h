@@ -2,6 +2,8 @@
 
 #include "PagedParam.h"
 
+#define NUM_PAGES 6
+
 #define DEFAULT_GRAIN_DUR 0.2f 
 #define MIN_GRAIN_DUR 0.01f 
 #define MAX_GRAIN_DUR 0.2f 
