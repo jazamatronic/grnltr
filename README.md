@@ -12,6 +12,14 @@ Jared ANDERSON
 grnltr - a Granulator
 
 Initial build for the Daisy Seed platform running on the pod 
+Now supports Bluemchen as a build target.  
+
+Default make will build for the pod, to build for bluemchen use:  
+
+```
+$ make BUILD_TARGET=bluemchen
+$ make BUILD_TARGET=bluemchen program-dfu
+```
 
 Clone this under the DaisyExamples/pod directory and run make to build.  
 
@@ -43,7 +51,12 @@ For Toggle parameters, send any CC value to toggle.
 | PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | Toggle Wave Loop\*<br> CC28 | N/A |
 
 Parameters marked with a \* are disabled in live record mode.
-        
+
+On the bluemchen the two knobs work as for the pod.  
+To emulate the buttons, long press the encoder to access parameter select mode.  
+Select a parameter with the encoder, short press to activate it.  
+Long press again to exit parameter select mode.  
+  
 A demo and feature walkthrough of the v0.7 version available, click here:  
 [![grnltr_demo](https://img.youtube.com/vi/RLfN7tFsF2Q/0.jpg)](https://youtu.be/RLfN7tFsF2Q "grnltr demo")  
 
