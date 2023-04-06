@@ -14,14 +14,15 @@ grnltr - a Granulator
 Initial build for the Daisy Seed platform running on the pod 
 Now supports Bluemchen as a build target.  
 
-Default make will build for the pod, to build for bluemchen use:  
-
 ```
 $ make BUILD_TARGET=bluemchen
 $ make BUILD_TARGET=bluemchen program-dfu
 ```
 
 Clone this under the DaisyExamples/pod directory and run make to build.  
+You should also init the kxmx_bluemchen submodule if you wish to target the bluemchen.  
+
+Default make will build for the pod, to build for bluemchen use:  
 
 In its current form, it reads up to 16 WAV files (total sample size must be < 64MB) from an SDMMC card that can then be granulated.
 Waves must be in mono s16 format.  I use sox to do conversion - something like:  
