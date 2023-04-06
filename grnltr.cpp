@@ -322,19 +322,10 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
       grnltr.ToggleRandomDensity();
       break;
     case CC_LIVE_REC:
-      grnltr.Stop();
-      InitControls();
-      grnltr.Live( \
-          &sm[0], \
-          live_rec_buf_len);
+      eq.push_event(eq.LIVE_REC, 0);
       break;
     case CC_LIVE_SAMP:
-      grnltr.Stop();
-      InitControls();
-      grnltr.Reset( \
-          &sm[0], \
-          live_rec_buf_len);
-      grnltr.Dispatch(0);
+      eq.push_event(eq.LIVE_PLAY, 0);
       break;
     case CC_BPM:
       // 60 + CC 
@@ -366,45 +357,45 @@ void process_events()
 {
   EventQueue<QUEUE_LENGTH>::event_entry ev = eq.pull_event();
   switch(ev.ev) {
-    case EventQueue<QUEUE_LENGTH>::PAGE_UP:
+    case eq.PAGE_UP:
       cur_page++;
       if (cur_page >= NUM_PAGES) { cur_page = 0; }
       break;
-    case EventQueue<QUEUE_LENGTH>::PAGE_DN:
+    case eq.PAGE_DN:
       cur_page--;
       if (cur_page < 0) { cur_page += NUM_PAGES; }
       break;
-    case EventQueue<QUEUE_LENGTH>::INCR_GRAIN_ENV:
+    case eq.INCR_GRAIN_ENV:
       cur_grain_env++;
       if (cur_grain_env == NUM_GRAIN_ENVS) {
         cur_grain_env = 0;
       }
       grnltr.ChangeEnv(grain_envs[cur_grain_env]);
       break;
-    case EventQueue<QUEUE_LENGTH>::RST_PITCH_SCAN:
+    case eq.RST_PITCH_SCAN:
       pitch_p.Lock(1.0);
       rate_p.Lock(1.0);
       mmh.ResetGotClock();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_GRAIN_REV:
+    case eq.TOG_GRAIN_REV:
       grnltr.ToggleGrainReverse();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_SCAN_REV:
+    case eq.TOG_SCAN_REV:
       grnltr.ToggleScanReverse();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_SCAT:
+    case eq.TOG_SCAT:
       grnltr.ToggleScatter();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_FREEZE:
+    case eq.TOG_FREEZE:
       grnltr.ToggleFreeze();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_RND_PITCH:
+    case eq.TOG_RND_PITCH:
       grnltr.ToggleRandomPitch();
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_RND_DENS:
+    case eq.TOG_RND_DENS:
       grnltr.ToggleRandomDensity();
       break;
-    case EventQueue<QUEUE_LENGTH>::INCR_WAV:
+    case eq.INCR_WAV:
       cur_wave++;
       if (cur_wave >= wav_file_count) cur_wave = 0;
       grnltr.Stop();
@@ -414,17 +405,17 @@ void process_events()
           wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
       grnltr.Dispatch(0);
       break;
-    case EventQueue<QUEUE_LENGTH>::TOG_LOOP:
+    case eq.TOG_LOOP:
       grnltr.ToggleSampleLoop();
       break;
-    case EventQueue<QUEUE_LENGTH>::LIVE_REC:
+    case eq.LIVE_REC:
       grnltr.Stop();
       InitControls();
       grnltr.Live( \
           &sm[0], \
           live_rec_buf_len);
       break;
-    case EventQueue<QUEUE_LENGTH>::LIVE_PLAY:
+    case eq.LIVE_PLAY:
       grnltr.Stop();
       InitControls();
       grnltr.Reset( \
@@ -515,11 +506,11 @@ int main(void)
   mmh.SetChannel(MIDI_CHANNEL);
   mmh.SetHWHandle(&hw);
 
-  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Start,	  RTStartCB);
-  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Continue, RTContCB);
-  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Stop,	  RTStopCB);
-  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::Beat, 	  RTBeatCB);
-  mmh.SetSRTCB(MidiMsgHandler<HW_TYPE>::HalfBeat, RTHalfBeatCB);
+  mmh.SetSRTCB(mmh.Start,     RTStartCB);
+  mmh.SetSRTCB(mmh.Continue,  RTContCB);
+  mmh.SetSRTCB(mmh.Stop,      RTStopCB);
+  mmh.SetSRTCB(mmh.Beat,      RTBeatCB);
+  mmh.SetSRTCB(mmh.HalfBeat,  RTHalfBeatCB);
   mmh.SetMNOHCB(MidiNOHCB);
   mmh.SetMCCHCB(MidiCCHCB);
   mmh.SetMPBHCB(MidiPBHCB);

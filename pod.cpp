@@ -9,15 +9,15 @@ uint8_t last_ui_update = 0;
 void UpdateEncoder()
 {
   if(hw.encoder.RisingEdge()) {
-    eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_WAV, 0);
+    eq.push_event(eq.INCR_WAV, 0);
   }
 
   int32_t incr = hw.encoder.Increment();
 
   if (incr == 0) { return; }
   (incr > 0) ? \
-    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_UP, 0) : \
-    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_DN, 0);
+    eq.push_event(eq.PAGE_UP, 0) : \
+    eq.push_event(eq.PAGE_DN, 0);
 }
 
 void UpdateUI(int8_t cur_page)
@@ -95,47 +95,47 @@ void UpdateButtons(int8_t cur_page)
   {
     case 0:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_GRAIN_ENV, 0);
+	eq.push_event(eq.INCR_GRAIN_ENV, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::RST_PITCH_SCAN, 0);
+	eq.push_event(eq.RST_PITCH_SCAN, 0);
       }
       break;
     case 1:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_GRAIN_REV, 0);
+	eq.push_event(eq.TOG_GRAIN_REV, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_SCAN_REV, 0);
+	eq.push_event(eq.TOG_SCAN_REV, 0);
       }
       break;
     case 2:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_SCAT, 0);
+	eq.push_event(eq.TOG_SCAT, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_FREEZE, 0);
+	eq.push_event(eq.TOG_FREEZE, 0);
       }
       break;
     case 3:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_RND_PITCH, 0);
+	eq.push_event(eq.TOG_RND_PITCH, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_RND_DENS, 0);
+	eq.push_event(eq.TOG_RND_DENS, 0);
       }
       break;
     case 4:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::LIVE_REC, 0);
+	eq.push_event(eq.LIVE_REC, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::LIVE_PLAY, 0);
+	eq.push_event(eq.LIVE_PLAY, 0);
       }
       break;
     case 5:
       if(hw.button1.RisingEdge()) {
-	eq.push_event(EventQueue<QUEUE_LENGTH>::TOG_LOOP, 0);
+	eq.push_event(eq.TOG_LOOP, 0);
       }
       if(hw.button2.RisingEdge()) {
       }

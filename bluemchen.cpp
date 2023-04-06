@@ -11,15 +11,15 @@ char strings[][MAX_STRING] = {"RED", "ORANGE", "YELLOW", "GREEN", "BLUE", "PURPL
 void UpdateEncoder()
 {
   if(hw.encoder.RisingEdge()) {
-    eq.push_event(EventQueue<QUEUE_LENGTH>::INCR_WAV, 0);
+    eq.push_event(eq.INCR_WAV, 0);
   }
 
   int32_t incr = hw.encoder.Increment();
 
   if (incr == 0) { return; }
   (incr > 0) ? \
-    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_UP, 0) : \
-    eq.push_event(EventQueue<QUEUE_LENGTH>::PAGE_DN, 0);
+    eq.push_event(eq.PAGE_UP, 0) : \
+    eq.push_event(eq.PAGE_DN, 0);
 }
 
 void UpdateUI(int8_t cur_page)
