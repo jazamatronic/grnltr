@@ -10,6 +10,8 @@
 #define MAX_STRING 12
 
 #define LONG_PRESS 512
+#define EXTRA_LONG_PRESS (LONG_PRESS * 3)
+#define DOUBLE_CLICK 500
 
 extern float sample_bpm;
 extern MidiMsgHandler<HW_TYPE> mmh;

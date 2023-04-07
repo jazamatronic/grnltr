@@ -26,8 +26,7 @@
 using namespace daisy;
 using namespace daisysp;
 
-//static Granulator grnltr;
-Granulator grnltr;
+static Granulator grnltr;
 static Decimator crush;
 MidiMsgHandler<HW_TYPE> mmh;
 EventQueue<QUEUE_LENGTH> eq;
@@ -111,6 +110,8 @@ grnltr_params_t grnltr_params;
 #define	CC_LIVE_SAMP	    32
 //C3
 #define BASE_NOTE	    60
+
+int cur_midi_channel = MIDI_CHANNEL;
 
 // 33mS - something like 30Hz
 #define MAIN_LOOP_DLY	   33 
@@ -421,6 +422,11 @@ void process_events()
           live_rec_buf_len);
       grnltr.Dispatch(0);
       break;
+    case eq.INCR_MIDI:
+      cur_midi_channel++;
+      cur_midi_channel &= 15; //wrap around
+      mmh.SetChannel(cur_midi_channel);
+      break;
     case eq.NONE:
     default:
       break;
@@ -516,7 +522,7 @@ int main(void)
   InitControls();
 
   // Setup Midi and Callbacks
-  mmh.SetChannel(MIDI_CHANNEL);
+  mmh.SetChannel(cur_midi_channel);
   mmh.SetHWHandle(&hw);
 
   mmh.SetSRTCB(mmh.Start,     RTStartCB);

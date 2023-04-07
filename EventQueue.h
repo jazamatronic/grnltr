@@ -25,6 +25,7 @@ class EventQueue
     TOG_LOOP,
     LIVE_REC,
     LIVE_PLAY,
+    INCR_MIDI,
     NONE
   };
 
