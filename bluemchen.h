@@ -6,6 +6,7 @@
 #include "params.h"
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
+#include "grnltr.h"
 
 #define MAX_STRING 12
 
@@ -16,6 +17,9 @@
 extern float sample_bpm;
 extern MidiMsgHandler<HW_TYPE> mmh;
 extern EventQueue<QUEUE_LENGTH> eq;
+extern char dir_names[MAX_DIRS][MAX_DIR_LENGTH];
+extern uint8_t	dir_count;
+extern int8_t	cur_dir;
 
 extern kxmx::Bluemchen hw;
 

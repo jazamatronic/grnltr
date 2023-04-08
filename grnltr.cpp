@@ -22,6 +22,7 @@
 #include "granulator.h"
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
+#include "grnltr.h"
 
 using namespace daisy;
 using namespace daisysp;
@@ -31,9 +32,6 @@ static Decimator crush;
 MidiMsgHandler<HW_TYPE> mmh;
 EventQueue<QUEUE_LENGTH> eq;
 
-#define GRAIN_ENV_SIZE 1024
-#define NUM_GRAIN_ENVS 6
-
 float rect_env[GRAIN_ENV_SIZE];
 float gauss_env[GRAIN_ENV_SIZE];
 float hamming_env[GRAIN_ENV_SIZE];
@@ -42,11 +40,6 @@ float expo_env[GRAIN_ENV_SIZE];
 float rexpo_env[GRAIN_ENV_SIZE];
 float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, expo_env, rexpo_env};
 size_t cur_grain_env = 2; 
-
-#define MAX_WAVES 16
-
-/**< Maximum LFN (set to same in FatFs (ffconf.h) */
-#define WAV_FILENAME_MAX 256 
 
 // 64 MB of memory - how many 16bit samples can we fit in there?
 int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];
@@ -60,21 +53,24 @@ size_t cur_sm_bytes;
 size_t live_rec_buf_len;
 
 // Buffer for copying wav files to SDRAM
-#define BUF_SIZE 8192
-char buf[BUF_SIZE];
+char buf[CP_BUF_SIZE];
 
 WavFileInfo wav_file_names[MAX_WAVES];
 uint8_t	    wav_file_count = 0;
 size_t	    wav_start_pos[MAX_WAVES];
+int8_t	    cur_wave = 0;
+
+char	dir_names[MAX_DIRS][MAX_DIR_LENGTH];
+char	cur_dir_name[MAX_DIR_LENGTH];
+uint8_t	dir_count = 0;
+int8_t	cur_dir = 0;
 
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p;
 
 int8_t cur_page = 0;
-int8_t cur_wave = 0;
 
-#define DEFAULT_BPM 120.0f
 float sample_bpm = DEFAULT_BPM;
 
 float sr;
@@ -85,36 +81,7 @@ FIL            SDFile;
 
 grnltr_params_t grnltr_params;
 
-#define MIDI_CHANNEL	    0 // todo - make this settable somehow. Daisy starts counting MIDI channels from 0
-#define CC_SCAN	       	    1 // MOD wheel controls Scan Rate
-#define CC_GRAINPITCH	    3 // CC3 and PitchBend control GrainPitch
-#define CC_GRAINDUR	    9 
-#define	CC_GRAINDENS	    14  
-#define CC_TOG_SCATTER	    15
-#define CC_SCATTERDIST	    20
-#define CC_TOG_PITCH	    21
-#define CC_PITCHDIST	    22
-#define CC_SAMPLESTART_MSB  12
-#define CC_SAMPLESTART_LSB  44
-#define CC_SAMPLEEND_MSB    13
-#define CC_SAMPLEEND_LSB    45
-#define	CC_CRUSH	    23
-#define	CC_DOWNSAMPLE	    24
-#define CC_TOG_GREV	    25
-#define CC_TOG_SREV	    26
-#define CC_TOG_FREEZE	    27
-#define CC_TOG_LOOP	    28
-#define CC_TOG_DENS	    29
-#define	CC_BPM		    30
-#define	CC_LIVE_REC	    31
-#define	CC_LIVE_SAMP	    32
-//C3
-#define BASE_NOTE	    60
-
 int cur_midi_channel = MIDI_CHANNEL;
-
-// 33mS - something like 30Hz
-#define MAIN_LOOP_DLY	   33 
 
 int  ReadWavsFromDir(const char *dir_path);
 void HandleMidiMessage();
@@ -145,13 +112,39 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
   }
 }
 
+int ListDirs(const char *path)
+{
+  DIR dir;
+  FILINFO fno;
+
+  if(f_opendir(&dir, path) != FR_OK)
+  {
+      return -1;
+  }
+  while((f_readdir(&dir, &fno) == FR_OK) && (dir_count < MAX_DIRS)) {
+    // Exit if NULL fname
+    if(fno.fname[0] == 0)
+        break;
+    // check if its a directory.
+    if(fno.fattrib & AM_DIR) {
+      strcpy(&dir_names[dir_count][0], fno.fname);
+      //hw.seed.PrintLine("  %s", fno.fname);
+      dir_count++;
+    }
+  }
+  f_closedir(&dir);
+  return 0;
+}
+
 int ReadWavsFromDir(const char *dir_path)
 {
   DIR dir;
   FILINFO fno;
-  char *  fn;
+  char *fn;
 
   size_t bytesread;
+
+  wav_file_count = 0;
 
 #ifdef TARGET_POD
   hw.led1.Set(GREEN);
@@ -176,11 +169,17 @@ int ReadWavsFromDir(const char *dir_path)
     if(strstr(fn, ".wav") || strstr(fn, ".WAV"))
     {
       strcpy(wav_file_names[wav_file_count].name, dir_path);
+      strcat(wav_file_names[wav_file_count].name, "/");
       strcat(wav_file_names[wav_file_count].name, fn);
+      //hw.seed.PrintLine("  %s : %s", fno.fname, wav_file_names[wav_file_count].name);
       wav_file_count++;
     }
   }
   f_closedir(&dir);
+
+  cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
+  live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
+  cur_wave = 0;
   
   // Now we'll go through each file and load the WavInfo.
   for(size_t i = 0; i < wav_file_count; i++)
@@ -200,11 +199,11 @@ int ReadWavsFromDir(const char *dir_path)
       wav_start_pos[i] = this_wav_start_pos;
 
       do {
-	f_read(&SDFile, (void *)buf, BUF_SIZE, &bytesread);
+	f_read(&SDFile, (void *)buf, CP_BUF_SIZE, &bytesread);
 	memcpy((void *)&sm[this_wav_start_pos], buf, bytesread);
       	cur_sm_bytes += bytesread;
 	this_wav_start_pos = (cur_sm_bytes / sizeof(int16_t));
-      } while (bytesread == BUF_SIZE);
+      } while (bytesread == CP_BUF_SIZE);
 
       f_close(&SDFile);
     }
@@ -212,7 +211,7 @@ int ReadWavsFromDir(const char *dir_path)
     hw.led1.Set(OFF);
     hw.UpdateLeds();
 #endif
-    System::Delay(250);
+    //System::Delay(250);
   }
   return 0;
 }
@@ -427,6 +426,19 @@ void process_events()
       cur_midi_channel &= 15; //wrap around
       mmh.SetChannel(cur_midi_channel);
       break;
+    case eq.NEXT_DIR:
+      cur_dir = ev.id;
+      grnltr.Stop();
+      InitControls();
+      strcpy(cur_dir_name, GRNLTR_PATH);
+      strcat(cur_dir_name, "/");
+      strcat(cur_dir_name, &dir_names[cur_dir][0]);
+      ReadWavsFromDir(cur_dir_name);
+      grnltr.Reset( \
+          &sm[wav_start_pos[cur_wave]], \
+          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+      grnltr.Dispatch(0);
+      break;
     case eq.NONE:
     default:
       break;
@@ -458,9 +470,6 @@ int main(void)
   // Init hardware
   sr = hw_init();
 
-  cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
-  live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
-  
 #ifdef TARGET_POD
   hw.led1.Set(RED);
   hw.UpdateLeds();
@@ -496,11 +505,19 @@ int main(void)
   f_mount(&fsi.GetSDFileSystem(), "/", 1);
   
   System::Delay(250);
+
+  //hw.seed.StartLog(true);
+  //hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
   
-  ReadWavsFromDir("/");
+  ListDirs(GRNLTR_PATH);
+  strcpy(cur_dir_name, GRNLTR_PATH);
+  strcat(cur_dir_name, "/");
+  strcat(cur_dir_name, &dir_names[cur_dir][0]);
+  //hw.seed.PrintLine("Opening %s", cur_dir_name);
+  ReadWavsFromDir(cur_dir_name);
   
   // unmount
-  f_mount(0, "/", 0);
+  //f_mount(0, "/", 0);
   
   System::Delay(250);
   

@@ -1,6 +1,7 @@
 #include "kxmx_bluemchen.h"
 #include "bluemchen.h"
 #include "EventQueue.h"
+#include "grnltr.h"
 
 kxmx::Bluemchen hw;
 static Parameter knob1, knob2;
@@ -9,7 +10,9 @@ bool long_press = false;
 bool extra_long_press = false;
 bool param_select = false;
 bool setup_page = false;
+bool browse = false;
 int8_t cur_param = 0;
+int8_t next_dir;
 
 
 page_t pages[NUM_PAGES] = { 
@@ -50,8 +53,18 @@ void UpdateEncoder(int8_t cur_page)
       long_press = false;
       extra_long_press = false;
     } else {
-      if (setup_page) {
-	eq.push_event(setup.events[cur_param], 0);
+      if (browse) {
+	browse = false;
+	if (next_dir != cur_dir) {
+	  eq.push_event(eq.NEXT_DIR, next_dir);
+	}
+      } else if (setup_page) {
+	if (cur_param) {
+	  browse = true;
+	  next_dir = cur_dir;
+	} else {
+	  eq.push_event(setup.events[cur_param], 0);
+	}
       } else if (param_select) {
 	eq.push_event(pages[cur_page].events[cur_param], 0);
       } else {
@@ -63,7 +76,11 @@ void UpdateEncoder(int8_t cur_page)
   int32_t incr = hw.encoder.Increment();
 
   if (incr == 0) { return; }
-  if (param_select || setup_page) {
+  if (browse) {
+    next_dir += incr;
+    if (next_dir >= dir_count) next_dir = 0;
+    if (next_dir < 0) next_dir += dir_count;
+  } else if (param_select || setup_page) {
     cur_param = cur_param + incr;
     if (cur_param > 1) {cur_param = 0;}
     if (cur_param < 0) {cur_param = 1;}
@@ -77,6 +94,7 @@ void UpdateEncoder(int8_t cur_page)
 void UpdateUI(int8_t cur_page)
 {
   page_t *page;
+  int8_t dir_idx = next_dir;
 
   // limit update rate
   uint32_t now = hw.seed.system.GetNow();
@@ -91,12 +109,25 @@ void UpdateUI(int8_t cur_page)
 
     hw.display.Fill(false);
 
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString(page->page, Font_6x8, true);
-    hw.display.SetCursor(0, 10);
-    hw.display.WriteString(page->param[0], Font_6x8, !(param_select && (cur_param == 0)));
-    hw.display.SetCursor(0, 20);
-    hw.display.WriteString(page->param[1], Font_6x8, !(param_select && (cur_param == 1)));
+    if (browse) {
+      hw.display.SetCursor(0, 0);
+      hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, false);
+      if (++dir_idx < dir_count) {
+	hw.display.SetCursor(0, 10);
+      	hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, true);
+	if (++dir_idx < dir_count) {
+	  hw.display.SetCursor(0, 20);
+      	  hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, true);
+	}
+      }
+    } else {
+      hw.display.SetCursor(0, 0);
+      hw.display.WriteString(page->page, Font_6x8, true);
+      hw.display.SetCursor(0, 10);
+      hw.display.WriteString(page->param[0], Font_6x8, !(param_select && (cur_param == 0)));
+      hw.display.SetCursor(0, 20);
+      hw.display.WriteString(page->param[1], Font_6x8, !(param_select && (cur_param == 1)));
+    }
 
     hw.display.Update();
   }

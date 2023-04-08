@@ -24,7 +24,8 @@ You should also init the kxmx_bluemchen submodule if you wish to target the blue
 
 Default make will build for the pod, to build for bluemchen use:  
 
-In its current form, it reads up to 16 WAV files (total sample size must be < 64MB) from an SDMMC card that can then be granulated.
+Up to 64 Banks of 16 WAV files (total sample size per bank must be < 64MB) from an SDMMC card can be read then be granulated.  
+Banks should be in separate directories under the /grnltr directory of the SDMMC card.  
 Waves must be in mono s16 format.  I use sox to do conversion - something like:  
 
 ```
@@ -57,6 +58,9 @@ On the bluemchen the two knobs work as for the pod.
 To emulate the buttons, long press the encoder to access parameter select mode.  
 Select a parameter with the encoder, short press to activate it.  
 Long press again to exit parameter select mode.  
+
+To enter the setup menu, do an extra long press on the encoder.  
+From the setup menu the MIDI channel can be selected, or a new bank of samples can be loaded by clicking on browse and then picking the desired bank.  
   
 A demo and feature walkthrough of the v0.7 version available, click here:  
 [![grnltr_demo](https://img.youtube.com/vi/RLfN7tFsF2Q/0.jpg)](https://youtu.be/RLfN7tFsF2Q "grnltr demo")  
