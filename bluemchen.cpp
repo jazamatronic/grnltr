@@ -34,6 +34,7 @@ void UpdateEncoder(int8_t cur_page)
       if (hw.encoder.TimeHeldMs() > LONG_PRESS) {
         long_press = true;
         param_select = !param_select;
+	cur_param = 0;
 	if (setup_page) {
 	  param_select = false;
 	  extra_long_press = false;
@@ -96,6 +97,7 @@ void UpdateUI(int8_t cur_page)
 {
   page_t *page;
   int8_t dir_idx = next_dir;
+  char disp[MAX_STRING + 1]; //+1 otherwise g++ complains?
 
   // limit update rate
   uint32_t now = hw.seed.system.GetNow();
@@ -112,13 +114,16 @@ void UpdateUI(int8_t cur_page)
 
     if (browse) {
       hw.display.SetCursor(0, 0);
-      hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, false);
+      strncpy(disp, &dir_names[dir_idx][0], MAX_STRING);
+      hw.display.WriteString(disp, Font_6x8, false);
       if (++dir_idx < dir_count) {
 	hw.display.SetCursor(0, 10);
-      	hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, true);
+	strncpy(disp, &dir_names[dir_idx][0], MAX_STRING);
+      	hw.display.WriteString(disp, Font_6x8, true);
 	if (++dir_idx < dir_count) {
 	  hw.display.SetCursor(0, 20);
-      	  hw.display.WriteString(&dir_names[dir_idx][0], Font_6x8, true);
+	  strncpy(disp, &dir_names[dir_idx][0], MAX_STRING);
+      	  hw.display.WriteString(disp, Font_6x8, true);
 	}
       }
     } else {

@@ -8,7 +8,7 @@
 #include "EventQueue.h"
 #include "grnltr.h"
 
-#define MAX_STRING 12
+#define MAX_STRING 11 // 10 chars 6px wide + terminating \0
 
 #define LONG_PRESS 512
 #define EXTRA_LONG_PRESS (LONG_PRESS * 3)
