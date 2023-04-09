@@ -833,9 +833,7 @@ int main(void)
 
       blink_cnt &= blink_mask;
       if (blink_cnt == 0) {
-#ifdef TARGET_POD
         hw.seed.SetLed(led_state);
-#endif
         led_state = !led_state;
       }
       blink_cnt++;
