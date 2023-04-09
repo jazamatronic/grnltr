@@ -51,6 +51,7 @@ For Toggle parameters, send any CC value to toggle.
 | GREEN | Randomize | Pitch Distance<br> CC22 | N/A | Toggle Random Pitch<br> CC21 | Toggle Random Density<br> CC29 |
 | BLUE | WAV Select | Sample Start\*<br> CC12 Coarse, CC44 Fine | Sample End\*<br> CC13 Coarse, CC45 Fine | Live Rec Mode<br> CC31 | Play Rec Buffer<br> CC32 |
 | PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | Toggle Wave Loop\*<br> CC28 | N/A |
+| VIOLET | Pan | Pan<br> CC33 | Random Pan Distance<br> CC34 | Toggle Random Pan<br> CC35 | N/A |
 
 Parameters marked with a \* are disabled in live record mode.
 

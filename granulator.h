@@ -118,13 +118,18 @@ class Granulator
     {
       float rand;
       float pitch = grain_pitch_;
+      float pan = pan_;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	if (silo[i].IsDone()) {
 	  if (random_pitch_) {
 	    rand = rng.Process();
 	    pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0 + (rand * pitch_dist_))));
 	  }
-	  silo[i].Dispatch(sample_pos, grain_dur_, env_mem_, pitch, reverse_grain_);
+	  if (random_pan_) {
+	    rand = rng.Process();
+	    pan = fminf(1.0f, fmaxf(0.0f, pan + (0.5 * rand * pan_dist_)));
+	  }
+	  silo[i].Dispatch(sample_pos, grain_dur_, env_mem_, pitch, pan, reverse_grain_);
 	  return;
 	}
       }
@@ -190,16 +195,32 @@ class Granulator
       }
     }
 
-
-    float Process(int16_t input)
+    void SetPan(float pan)
     {
-      float sample = 0;
+      pan_ = pan;
+    }
+
+    void SetPanDist(float pan_dist)
+    {
+      pan_dist_ = pan_dist;
+    }
+
+
+    void ToggleRandomPan()
+    {
+      random_pan_ = !random_pan_;
+    }
+
+    sample_t Process(int16_t input)
+    {
+      sample_t s;
+      sample_t out = {0, 0};
       float rand;
       int32_t offset;
       size_t pos = 0;
       bool eot = false;
 
-      if (stop_) return 0.0f;
+      if (stop_) return {0.0f, 0.0f};
 
       if (freeze_)
       {
@@ -242,13 +263,17 @@ class Granulator
 
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	if (!silo[i].IsDone()) {
-	  sample += silo[i].Process();
+	  s = silo[i].Process();
+	  out.l += s.l;
+	  out.r += s.r;
 	}
       }
 
       if (eot && (sample_loop_ == false)) Stop();
       // clamp?
-      return fminf(1.0f, fmaxf(-1.0f, sample));
+      out.l = fminf(1.0f, fmaxf(-1.0f, out.l));
+      out.r = fminf(1.0f, fmaxf(-1.0f, out.r));
+      return out;
     }
 
   private:
@@ -265,7 +290,9 @@ class Granulator
       SetDensity(sr_/DEFAULT_GRAIN_DENS);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
-      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = false;
+      SetPan(DEFAULT_PAN);
+      SetPanDist(DEFAULT_PAN_DIST);
+      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = random_pan_ = false;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	silo[i].Init(sr_, sample_start_, len_, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }
@@ -276,9 +303,10 @@ class Granulator
     int16_t *sample_start_;  
     size_t len_, env_len_, scatter_dist_, write_pos_;
     int32_t density_, density_count_;
-    float sr_, grain_dur_, grain_pitch_, pitch_dist_;
+    float sr_, grain_dur_, grain_pitch_, pitch_dist_, pan_, pan_dist_;
     float *env_mem_;
-    bool sample_loop_, stop_, reverse_grain_, scatter_grain_, random_pitch_, random_density_, freeze_;
+    bool sample_loop_, stop_, reverse_grain_, scatter_grain_, \
+	 random_pitch_, random_density_, freeze_, random_pan_;
     daisysp::crc_noise rng;
 
     // used for live record buffer only

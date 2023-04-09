@@ -2,6 +2,7 @@
 #include "led_colours.h"
 #include "EventQueue.h"
 
+// TODO: add midi channel incr and basic bank browsing, like on the bluemchen
 DaisyPod hw;
 static Parameter knob1, knob2;
 uint32_t last_ui_update = 0;
@@ -81,6 +82,14 @@ void UpdateUI(int8_t cur_page)
          * b1 = Toggle Wave Loop (disabled in live mode)
          */
         break;
+      case 6:
+        hw.led1.Set(VIOLET);
+        /*
+         * k1 = pan
+         * k2 = pan dist
+         * b1 = Toggle random pan
+         */
+        break;
       default:
         hw.led1.Set(WHITE);
         break;
@@ -140,6 +149,11 @@ void UpdateButtons(int8_t cur_page)
       if(hw.button2.RisingEdge()) {
       }
       break;
+    case 6:
+      if(hw.button1.RisingEdge()) {
+	eq.push_event(eq.TOG_RND_PAN, 0);
+      }
+      break;
     default:
       break;
   }
@@ -165,6 +179,8 @@ void Controls(int8_t cur_page)
   grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
   grnltr_params.Crush =        crush_p.Process(k1, cur_page);
   grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
+  grnltr_params.Pan =	       pan_p.Process(k1, cur_page);
+  grnltr_params.PanDist =      pan_dist_p.Process(k2, cur_page);
 }
 
 float hw_init() {

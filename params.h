@@ -2,7 +2,7 @@
 
 #include "PagedParam.h"
 
-#define NUM_PAGES 6
+#define NUM_PAGES 7
 
 #define DEFAULT_GRAIN_DUR 0.2f 
 #define MIN_GRAIN_DUR 0.01f 
@@ -19,11 +19,13 @@
 #define DEFAULT_SCATTER_DIST  0.1f 
 #define DEFAULT_PITCH_DIST    0.1f 
 #define DEFAULT_GRAIN_VOL     0.7f
+#define DEFAULT_PAN	      0.5f
+#define DEFAULT_PAN_DIST      0.5f
 
 #define PARAM_THRESH 0.01f
 extern PagedParam pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 		  grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-	    	  sample_end_p;
+	    	  sample_end_p, pan_p, pan_dist_p;
 
 typedef struct {
   float	  GrainPitch;
@@ -36,6 +38,8 @@ typedef struct {
   float	  SampleEnd;
   float	  Crush;
   float	  DownSample;
+  float	  Pan;
+  float	  PanDist;
 } grnltr_params_t;
 
 extern grnltr_params_t grnltr_params;

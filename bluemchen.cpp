@@ -21,7 +21,8 @@ page_t pages[NUM_PAGES] = {
   {"YELLOW",  "scatter",    "freeze",	  eq.TOG_SCAT,	      eq.TOG_FREEZE}, 
   {"GREEN",   "rnd pitch",  "rnd dens",	  eq.TOG_RND_PITCH,   eq.TOG_RND_DENS}, 
   {"BLUE",    "live rec",   "play rec",	  eq.LIVE_REC,	      eq.LIVE_PLAY}, 
-  {"PURPLE",  "loop",	    "",		  eq.TOG_LOOP,	      eq.NONE} 
+  {"PURPLE",  "loop",	    "",		  eq.TOG_LOOP,	      eq.NONE}, 
+  {"VIOLET",  "rnd pan",    "",		  eq.TOG_RND_PAN,     eq.NONE} 
 };
 
 page_t setup = {"SETUP", "midi", "browse", eq.INCR_MIDI, eq.NONE};
@@ -153,6 +154,8 @@ void Controls(int8_t cur_page)
   grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
   grnltr_params.Crush =        crush_p.Process(k1, cur_page);
   grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
+  grnltr_params.Pan =	       pan_p.Process(k1, cur_page);
+  grnltr_params.PanDist =      pan_dist_p.Process(k2, cur_page);
 }
 
 float hw_init() {

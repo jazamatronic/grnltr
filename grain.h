@@ -2,6 +2,12 @@
 
 #include "sample_phasor.h"
 
+typedef struct {
+  float l;
+  float r;
+} sample_t;
+
+
 // TODO: make it stereo and include pan/width/random pan
 template <typename T>
 class Grain
@@ -17,6 +23,7 @@ class Grain
       vol_ = vol;
       done_ = true;
     }
+
 
     // pitch usually in the range of 0.5 to 2.0 (-8va to +8va)
     // 1 is no pitch adjustment
@@ -78,8 +85,19 @@ class Grain
       vol_ = vol;
     }
 
+    // equal power panning
+    // pan -> 0 = l, 1 = r
+    void SetGrainPan(float pan)
+    {
+      float pan_rads = (M_PI / 4) + pan * (-M_PI / 2);
+      float root_two_on_two = sqrtf(2.0f) / 2.0f;
+      float c = cosf(pan_rads);
+      float s = sinf(pan_rads);
+      pan_l_ = root_two_on_two * (c + s);
+      pan_r_ = root_two_on_two * (c - s);
+    }
 
-    void Dispatch(size_t sample_pos, float dur, float *env, float pitch, bool r)
+    void Dispatch(size_t sample_pos, float dur, float *env, float pitch, float pan, bool r)
     {
       sample_.Reset();
       sample_.SetCurPos(sample_pos);
@@ -90,13 +108,16 @@ class Grain
       env_.SetDur(dur);
       env_.SetSample(env);
 
+      SetGrainPan(pan);
+
       done_ = false;
     }
 
-    float Process()
+    sample_t Process()
     {
       float env, sample;
       bool sample_done;
+      sample_t out;
 
       if (done_) {
 	sample = 0.0f;
@@ -104,12 +125,15 @@ class Grain
       	env = env_.Process(&done_);
 	sample = sample_.Process(&sample_done) * vol_ * env;
       }
-      return sample;
+      out.l = pan_l_ * sample;
+      out.r = pan_r_ * sample;
+      return out;
     }
 
   private:
     Sample<T> sample_;
     Sample<float> env_;
     float vol_;
+    float pan_l_, pan_r_;
     bool done_;
 };

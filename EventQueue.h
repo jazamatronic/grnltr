@@ -27,6 +27,7 @@ class EventQueue
     LIVE_PLAY,
     INCR_MIDI,
     NEXT_DIR,
+    TOG_RND_PAN,
     NONE
   };
 

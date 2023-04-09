@@ -17,6 +17,7 @@
 #include "led_colours.h"
 #include "util/wav_format.h"
 #include "Effects/decimator.h"
+#include "grain.h"
 #include "params.h"
 #include "windows.h"
 #include "granulator.h"
@@ -28,7 +29,8 @@ using namespace daisy;
 using namespace daisysp;
 
 static Granulator grnltr;
-static Decimator crush;
+static Decimator crush_l;
+static Decimator crush_r;
 MidiMsgHandler<HW_TYPE> mmh;
 EventQueue<QUEUE_LENGTH> eq;
 
@@ -67,7 +69,7 @@ int8_t	cur_dir = 0;
 
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-	    sample_end_p;
+	    sample_end_p, pan_p, pan_dist_p;
 
 int8_t cur_page = 0;
 
@@ -89,7 +91,7 @@ void InitControls();
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
-  float sample;
+  sample_t sample;
 
   grnltr.SetGrainPitch(grnltr_params.GrainPitch);
   grnltr.SetScanRate(grnltr_params.ScanRate);
@@ -99,16 +101,21 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
   grnltr.SetPitchDist(grnltr_params.PitchDist);
   grnltr.SetSampleStart(grnltr_params.SampleStart);
   grnltr.SetSampleEnd(grnltr_params.SampleEnd);
-  crush.SetBitcrushFactor(grnltr_params.Crush);
-  crush.SetDownsampleFactor(grnltr_params.DownSample);
+  grnltr.SetPan(grnltr_params.Pan);
+  grnltr.SetPanDist(grnltr_params.PanDist);
+  crush_l.SetBitcrushFactor(grnltr_params.Crush);
+  crush_l.SetDownsampleFactor(grnltr_params.DownSample);
+  crush_r.SetBitcrushFactor(grnltr_params.Crush);
+  crush_r.SetDownsampleFactor(grnltr_params.DownSample);
 
   //audio
   for(size_t i = 0; i < size; i++)
   {
     sample = grnltr.Process(f2s16(in[0][i]));
-    sample = crush.Process(sample);
-    out[0][i] = sample;
-    out[1][i] = sample;
+    sample.l = crush_l.Process(sample.l);
+    sample.r = crush_r.Process(sample.r);
+    out[0][i] = sample.l;
+    out[1][i] = sample.r;
   }
 }
 
@@ -325,6 +332,15 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_LIVE_SAMP:
       eq.push_event(eq.LIVE_PLAY, 0);
       break;
+    case CC_PAN:
+      pan_p.MidiCCIn(val);
+      break;
+    case CC_PAN_DIST:
+      pan_dist_p.MidiCCIn(val);
+      break;
+    case CC_TOG_RND_PAN:
+      eq.push_event(eq.TOG_RND_PAN, 0);
+      break;
     case CC_BPM:
       // 60 + CC 
       // Need some concept of bars or beats per sample
@@ -439,6 +455,9 @@ void process_events()
           wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
       grnltr.Dispatch(0);
       break;
+    case eq.TOG_RND_PAN:
+      grnltr.ToggleRandomPan();
+      break;
     case eq.NONE:
     default:
       break;
@@ -457,6 +476,8 @@ void InitControls()
   sample_end_p.Init(	  4,  1.0f,			0.0f,   1.0f, PARAM_THRESH);
   crush_p.Init(           5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
   downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
+  pan_p.Init(		  6,  DEFAULT_PAN,              0.0f,   1.0f, PARAM_THRESH);
+  pan_dist_p.Init(	  6,  DEFAULT_PAN_DIST,         0.0f,   1.0f, PARAM_THRESH);
 }
 
 int main(void)
@@ -533,8 +554,10 @@ int main(void)
       GRAIN_ENV_SIZE);
   grnltr.Dispatch(0);
   
-  crush.Init();
-  crush.SetDownsampleFactor(0.0f);
+  crush_l.Init();
+  crush_l.SetDownsampleFactor(0.0f);
+  crush_r.Init();
+  crush_r.SetDownsampleFactor(0.0f);
 
   InitControls();
 
