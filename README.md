@@ -62,6 +62,9 @@ Long press again to exit parameter select mode.
 
 To enter the setup menu, do an extra long press on the encoder.  
 From the setup menu the MIDI channel can be selected, or a new bank of samples can be loaded by clicking on browse and then picking the desired bank.  
+
+On the pod, the setup menu is accessed via a long press - LED1 will turn CYAN.
+Button1 increments the MIDI channel, button two will cycle through the available sample banks.
   
 A demo and feature walkthrough of the v0.7 version available, click here:  
 [![grnltr_demo](https://img.youtube.com/vi/RLfN7tFsF2Q/0.jpg)](https://youtu.be/RLfN7tFsF2Q "grnltr demo")  

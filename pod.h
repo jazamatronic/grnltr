@@ -7,9 +7,13 @@
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
 
+#define LONG_PRESS 512
+
 extern float sample_bpm;
 extern MidiMsgHandler<HW_TYPE> mmh;
 extern EventQueue<QUEUE_LENGTH> eq;
+extern uint8_t	dir_count;
+extern int8_t	cur_dir;
 
 extern DaisyPod hw;
 
