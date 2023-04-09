@@ -123,6 +123,18 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
   }
 }
 
+// needed to make led pwm work so we can see what's happening
+void grnltr_delay(uint32_t delay_ms) {
+  uint32_t dly = 0;
+  while (dly < delay_ms) {
+  #ifdef TARGET_POD
+    hw.UpdateLeds();
+  #endif
+    System::Delay(1);
+    dly++;
+  }
+}
+
 int ListDirs(const char *path)
 {
   DIR dir;
@@ -196,11 +208,14 @@ int ReadWavsFromDir(const char *dir_path)
   live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
   cur_wave = 0;
   
+#ifdef TARGET_POD
+    hw.led1.Set(BLUE);
+#endif
   // Now we'll go through each file and load the WavInfo.
   for(size_t i = 0; i < wav_file_count; i++)
   {
 #ifdef TARGET_POD
-    hw.led1.Set(BLUE);
+    hw.UpdateLeds();
 #endif
     // Read the test file from the SD Card.
     if(f_open(&SDFile, wav_file_names[i].name, FA_READ) == FR_OK)
@@ -222,13 +237,69 @@ int ReadWavsFromDir(const char *dir_path)
       f_close(&SDFile);
       wavs_read++;
     }
-    //System::Delay(250);
   }
 #ifdef TARGET_POD
     hw.led1.Set(OFF);
+    hw.UpdateLeds();
 #endif
   return 0;
 }
+
+void LoadNewDir() {
+  strcpy(cur_dir_name, GRNLTR_PATH);
+  strcat(cur_dir_name, "/");
+  strcat(cur_dir_name, &dir_names[cur_dir][0]);
+  if (ReadWavsFromDir(cur_dir_name) < 0) {
+#ifdef TARGET_POD
+    hw.led2.Set(WHITE);
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("DIR?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    for(;;) {
+      grnltr_delay(1);
+    }
+  }
+
+  if (wav_file_count == 0) {
+#ifdef TARGET_POD
+    hw.led2.Set(ROSE);
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("WAVS?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    for(;;) {
+      grnltr_delay(1);
+    }
+  }
+
+  if (wavs_read != wav_file_count) {
+#ifdef DEBUG_POD
+    hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
+#endif
+
+#ifdef TARGET_POD
+    hw.led2.Set(LBLUE);
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("SIZE?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    grnltr_delay(1000);
+  }
+}
+  
 
 // MIDI Callback Functions
 void RTStartCB()
@@ -250,7 +321,6 @@ void RTStopCB()
   grnltr.Stop();
 #ifdef TARGET_POD
   hw.led2.Set(OFF);
-  hw.UpdateLeds();
 #endif
 }
 
@@ -404,18 +474,6 @@ void MidiNOffHCB(uint8_t n, uint8_t vel)
   }
 }
 
-// needed to make led pwm work so we can see what's happening
-void grnltr_delay(uint32_t delay_ms) {
-  uint32_t dly = 0;
-  while (dly < delay_ms) {
-  #ifdef TARGET_POD
-    hw.UpdateLeds();
-  #endif
-    System::Delay(1);
-    dly++;
-  }
-}
-
 void process_events()
 {
   EventQueue<QUEUE_LENGTH>::event_entry ev = eq.pull_event();
@@ -497,59 +555,7 @@ void process_events()
       cur_dir = ev.id;
       grnltr.Stop();
       InitControls();
-      strcpy(cur_dir_name, GRNLTR_PATH);
-      strcat(cur_dir_name, "/");
-      strcat(cur_dir_name, &dir_names[cur_dir][0]);
-      if (ReadWavsFromDir(cur_dir_name) < 0) {
-    #ifdef TARGET_POD
-        hw.led2.Set(WHITE);
-    #endif
-      
-    #ifdef TARGET_BLUEMCHEN
-        hw.display.Fill(false);
-        hw.display.SetCursor(0, 0);
-        hw.display.WriteString("DIR?", Font_6x8, true);
-        hw.display.Update();
-    #endif
-	for(;;) {
-    	  grnltr_delay(1);
-    	}
-      }
-    
-      if (wav_file_count == 0) {
-    #ifdef TARGET_POD
-        hw.led2.Set(ROSE);
-    #endif
-      
-    #ifdef TARGET_BLUEMCHEN
-        hw.display.Fill(false);
-        hw.display.SetCursor(0, 0);
-        hw.display.WriteString("WAVS?", Font_6x8, true);
-        hw.display.Update();
-    #endif
-	for(;;) {
-    	  grnltr_delay(1);
-    	}
-      }
-    
-      if (wavs_read != wav_file_count) {
-    #ifdef TARGET_POD
-        hw.led2.Set(LBLUE);
-    #endif
-
-    #ifdef DEBUG_POD
-        hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
-    #endif
-      
-    #ifdef TARGET_BLUEMCHEN
-        hw.display.Fill(false);
-        hw.display.SetCursor(0, 0);
-        hw.display.WriteString("SIZE?", Font_6x8, true);
-        hw.display.Update();
-    #endif
-    	grnltr_delay(1000);
-      }
-  
+      LoadNewDir();
       grnltr.Reset( \
           &sm[wav_start_pos[cur_wave]], \
           wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
@@ -693,7 +699,6 @@ int main(void)
 
 #ifdef TARGET_POD
     hw.led2.Set(LGREEN);
-    hw.UpdateLeds();
 #endif
   
 #ifdef TARGET_BLUEMCHEN
@@ -708,59 +713,8 @@ int main(void)
     }
   }
 
-  strcpy(cur_dir_name, GRNLTR_PATH);
-  strcat(cur_dir_name, "/");
-  strcat(cur_dir_name, &dir_names[cur_dir][0]);
-  if (ReadWavsFromDir(cur_dir_name) < 0) {
-#ifdef TARGET_POD
-    hw.led2.Set(WHITE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("DIR?", Font_6x8, true);
-    hw.display.Update();
-#endif
-    for(;;) {
-      grnltr_delay(1);
-    }
-  }
+  LoadNewDir();
 
-  if (wav_file_count == 0) {
-#ifdef TARGET_POD
-    hw.led2.Set(ROSE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("WAVS?", Font_6x8, true);
-    hw.display.Update();
-#endif
-    for(;;) {
-      grnltr_delay(1);
-    }
-  }
-
-  if (wavs_read != wav_file_count) {
-#ifdef DEBUG_POD
-    hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
-#endif
-
-#ifdef TARGET_POD
-    hw.led2.Set(LBLUE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("SIZE?", Font_6x8, true);
-    hw.display.Update();
-#endif
-    grnltr_delay(1000);
-  }
-  
   // unmount
   //f_mount(0, "/", 0);
   
