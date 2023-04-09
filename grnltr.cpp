@@ -546,6 +546,10 @@ int main(void)
 #endif
 #ifdef TARGET_BLUEMCHEN
   hw.display.Fill(false);
+  hw.display.SetCursor(0, 0);
+  hw.display.WriteString("Manifest", Font_6x8, true);
+  hw.display.SetCursor(0, 10);
+  hw.display.WriteString("awareness", Font_6x8, true);
   hw.display.Update();
 #endif
 
