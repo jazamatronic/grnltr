@@ -61,6 +61,7 @@ WavFileInfo wav_file_names[MAX_WAVES];
 uint8_t	    wav_file_count = 0;
 size_t	    wav_start_pos[MAX_WAVES];
 int8_t	    cur_wave = 0;
+int8_t	    wavs_read = 0;
 
 char	dir_names[MAX_DIRS][MAX_DIR_LENGTH];
 char	cur_dir_name[MAX_DIR_LENGTH];
@@ -157,10 +158,10 @@ int ReadWavsFromDir(const char *dir_path)
   size_t bytesread;
 
   wav_file_count = 0;
+  wavs_read = 0;
 
-#ifdef TARGET_POD
-  hw.led1.Set(GREEN);
-  hw.UpdateLeds();
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("Opening %s", cur_dir_name);
 #endif
 
   // See /data/daisy/DaisyExamples-sm/libDaisy/src/hid/wavplayer.*
@@ -200,7 +201,6 @@ int ReadWavsFromDir(const char *dir_path)
   {
 #ifdef TARGET_POD
     hw.led1.Set(BLUE);
-    hw.UpdateLeds();
 #endif
     // Read the test file from the SD Card.
     if(f_open(&SDFile, wav_file_names[i].name, FA_READ) == FR_OK)
@@ -220,13 +220,13 @@ int ReadWavsFromDir(const char *dir_path)
       } while (bytesread == CP_BUF_SIZE);
 
       f_close(&SDFile);
+      wavs_read++;
     }
-#ifdef TARGET_POD
-    hw.led1.Set(OFF);
-    hw.UpdateLeds();
-#endif
     //System::Delay(250);
   }
+#ifdef TARGET_POD
+    hw.led1.Set(OFF);
+#endif
   return 0;
 }
 
@@ -404,6 +404,18 @@ void MidiNOffHCB(uint8_t n, uint8_t vel)
   }
 }
 
+// needed to make led pwm work so we can see what's happening
+void grnltr_delay(uint32_t delay_ms) {
+  uint32_t dly = 0;
+  while (dly < delay_ms) {
+  #ifdef TARGET_POD
+    hw.UpdateLeds();
+  #endif
+    System::Delay(1);
+    dly++;
+  }
+}
+
 void process_events()
 {
   EventQueue<QUEUE_LENGTH>::event_entry ev = eq.pull_event();
@@ -488,7 +500,56 @@ void process_events()
       strcpy(cur_dir_name, GRNLTR_PATH);
       strcat(cur_dir_name, "/");
       strcat(cur_dir_name, &dir_names[cur_dir][0]);
-      ReadWavsFromDir(cur_dir_name);
+      if (ReadWavsFromDir(cur_dir_name) < 0) {
+    #ifdef TARGET_POD
+        hw.led2.Set(WHITE);
+    #endif
+      
+    #ifdef TARGET_BLUEMCHEN
+        hw.display.Fill(false);
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString("DIR?", Font_6x8, true);
+        hw.display.Update();
+    #endif
+	for(;;) {
+    	  grnltr_delay(1);
+    	}
+      }
+    
+      if (wav_file_count == 0) {
+    #ifdef TARGET_POD
+        hw.led2.Set(ROSE);
+    #endif
+      
+    #ifdef TARGET_BLUEMCHEN
+        hw.display.Fill(false);
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString("WAVS?", Font_6x8, true);
+        hw.display.Update();
+    #endif
+	for(;;) {
+    	  grnltr_delay(1);
+    	}
+      }
+    
+      if (wavs_read != wav_file_count) {
+    #ifdef TARGET_POD
+        hw.led2.Set(LBLUE);
+    #endif
+
+    #ifdef DEBUG_POD
+        hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
+    #endif
+      
+    #ifdef TARGET_BLUEMCHEN
+        hw.display.Fill(false);
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString("SIZE?", Font_6x8, true);
+        hw.display.Update();
+    #endif
+    	grnltr_delay(1000);
+      }
+  
       grnltr.Reset( \
           &sm[wav_start_pos[cur_wave]], \
           wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
@@ -540,9 +601,12 @@ int main(void)
   // Init hardware
   sr = hw_init();
 
+#ifdef DEBUG_POD
+  hw.seed.StartLog(true);
+#endif
+
 #ifdef TARGET_POD
   hw.led1.Set(RED);
-  hw.UpdateLeds();
 #endif
 #ifdef TARGET_BLUEMCHEN
   hw.display.Fill(false);
@@ -553,33 +617,53 @@ int main(void)
   hw.display.Update();
 #endif
 
+  grnltr_delay(250);
+
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("SD CFG", cur_dir_name);
+#endif
+
   // Init SD Card
   SdmmcHandler::Config sd_cfg;
   sd_cfg.Defaults();
   sd.Init(sd_cfg);
-  
-  System::Delay(250);
+
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("  OK", cur_dir_name);
+#endif
   
 #ifdef TARGET_POD
   hw.led1.Set(ORANGE);
-  hw.UpdateLeds();
+#endif
+
+  grnltr_delay(250);
+
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("FSI Init", cur_dir_name);
 #endif
   
   // Links libdaisy i/o to fatfs driver.
   fsi.Init(FatFSInterface::Config::MEDIA_SD);
-  
-  System::Delay(250);
+
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("  OK", cur_dir_name);
+#endif
   
 #ifdef TARGET_POD
   hw.led1.Set(YELLOW);
-  hw.UpdateLeds();
 #endif
+
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("SD Mount", cur_dir_name);
+#endif
+  
+  grnltr_delay(250);
+  
   
   // Mount SD Card
   if (f_mount(&fsi.GetSDFileSystem(), "/", 1) != FR_OK) {
 #ifdef TARGET_POD
     hw.led2.Set(CYAN);
-    hw.UpdateLeds();
 #endif
   
 #ifdef TARGET_BLUEMCHEN
@@ -589,13 +673,19 @@ int main(void)
     hw.display.Update();
 #endif
 
-    for(;;) {}
+    for(;;) {
+      grnltr_delay(1);
+    }
   }
-  
-  System::Delay(250);
 
 #ifdef DEBUG_POD
-  hw.seed.StartLog(true);
+  hw.seed.PrintLine("  OK", cur_dir_name);
+#endif
+  
+  
+  grnltr_delay(250);
+
+#ifdef DEBUG_POD
   hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
 #endif
   
@@ -613,19 +703,17 @@ int main(void)
     hw.display.Update();
 #endif
 
-    for(;;) {}
+    for(;;) {
+      grnltr_delay(1);
+    }
   }
 
   strcpy(cur_dir_name, GRNLTR_PATH);
   strcat(cur_dir_name, "/");
   strcat(cur_dir_name, &dir_names[cur_dir][0]);
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("Opening %s", cur_dir_name);
-#endif
   if (ReadWavsFromDir(cur_dir_name) < 0) {
 #ifdef TARGET_POD
     hw.led2.Set(WHITE);
-    hw.UpdateLeds();
 #endif
   
 #ifdef TARGET_BLUEMCHEN
@@ -634,13 +722,14 @@ int main(void)
     hw.display.WriteString("DIR?", Font_6x8, true);
     hw.display.Update();
 #endif
-    for(;;) {}
+    for(;;) {
+      grnltr_delay(1);
+    }
   }
 
   if (wav_file_count == 0) {
 #ifdef TARGET_POD
     hw.led2.Set(ROSE);
-    hw.UpdateLeds();
 #endif
   
 #ifdef TARGET_BLUEMCHEN
@@ -649,17 +738,34 @@ int main(void)
     hw.display.WriteString("WAVS?", Font_6x8, true);
     hw.display.Update();
 #endif
-    for(;;) {}
+    for(;;) {
+      grnltr_delay(1);
+    }
+  }
+
+  if (wavs_read != wav_file_count) {
+#ifdef DEBUG_POD
+    hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
+#endif
+
+#ifdef TARGET_POD
+    hw.led2.Set(LBLUE);
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("SIZE?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    grnltr_delay(1000);
   }
   
   // unmount
   //f_mount(0, "/", 0);
   
-  System::Delay(250);
-  
 #ifdef TARGET_POD
   hw.led1.Set(PURPLE);
-  hw.UpdateLeds();
 #endif
   
   grnltr.Init(sr, \

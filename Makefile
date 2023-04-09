@@ -35,3 +35,7 @@ ifeq "$(BUILD_TARGET)" "pod"
 C_DEFS += -DTARGET_POD
 endif
 
+ifdef DEBUG_POD 
+C_DEFS += -DDEBUG_POD
+endif
+
