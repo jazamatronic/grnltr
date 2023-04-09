@@ -89,6 +89,9 @@ int  ReadWavsFromDir(const char *dir_path);
 void HandleMidiMessage();
 void InitControls();
 
+bool retrig = false;
+bool gate = false;
+
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
   sample_t sample;
@@ -135,7 +138,9 @@ int ListDirs(const char *path)
     // check if its a directory.
     if(fno.fattrib & AM_DIR) {
       strcpy(&dir_names[dir_count][0], fno.fname);
-      //hw.seed.PrintLine("  %s", fno.fname);
+#ifdef DEBUG_POD
+      hw.seed.PrintLine("  %s", fno.fname);
+#endif
       dir_count++;
     }
   }
@@ -178,7 +183,9 @@ int ReadWavsFromDir(const char *dir_path)
       strcpy(wav_file_names[wav_file_count].name, dir_path);
       strcat(wav_file_names[wav_file_count].name, "/");
       strcat(wav_file_names[wav_file_count].name, fn);
-      //hw.seed.PrintLine("  %s : %s", fno.fname, wav_file_names[wav_file_count].name);
+#ifdef DEBUG_POD
+      hw.seed.PrintLine("  %s : %s", fno.fname, wav_file_names[wav_file_count].name);
+#endif
       wav_file_count++;
     }
   }
@@ -241,6 +248,10 @@ void RTContCB()
 void RTStopCB()
 {
   grnltr.Stop();
+#ifdef TARGET_POD
+  hw.led2.Set(OFF);
+  hw.UpdateLeds();
+#endif
 }
 
 void RTBeatCB()
@@ -341,6 +352,12 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_TOG_RND_PAN:
       eq.push_event(eq.TOG_RND_PAN, 0);
       break;
+    case CC_TOG_RETRIG:
+      eq.push_event(eq.TOG_RETRIG, 0);
+      break;
+    case CC_TOG_GATE:
+      eq.push_event(eq.TOG_GATE, 0);
+      break;
     case CC_BPM:
       // 60 + CC 
       // Need some concept of bars or beats per sample
@@ -354,16 +371,36 @@ void MidiPBHCB(int16_t val)
   pitch_p.MidiPBIn(val);
 }
 
-void MidiNOHCB(uint8_t n, uint8_t vel) 
+void MidiNOnHCB(uint8_t n, uint8_t vel) 
 { 
+  int8_t next_wave;
   if ((n >= BASE_NOTE) && (n < (BASE_NOTE + wav_file_count))) {
-    cur_wave = n - BASE_NOTE;
-    grnltr.Stop();
-    InitControls();
-    grnltr.Reset( \
-        &sm[wav_start_pos[cur_wave]], \
-        wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
-    grnltr.Dispatch(0);
+    next_wave = n - BASE_NOTE;
+    if (next_wave != cur_wave) {
+      cur_wave = next_wave;
+      grnltr.Stop();
+      InitControls();
+      grnltr.Reset( \
+          &sm[wav_start_pos[cur_wave]], \
+          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+      grnltr.Dispatch(0);
+    } else {
+      if (retrig) {
+	grnltr.ReStart();
+      } else {
+	grnltr.Start();
+      }
+    }
+  }
+}
+
+void MidiNOffHCB(uint8_t n, uint8_t vel) 
+{ 
+  int8_t this_wave = n - BASE_NOTE;
+  if (this_wave == cur_wave) {
+    if (gate) {
+      grnltr.Stop();
+    }
   }
 }
 
@@ -430,6 +467,8 @@ void process_events()
           live_rec_buf_len);
       break;
     case eq.LIVE_PLAY:
+      gate = false;
+      retrig = false;
       grnltr.Stop();
       InitControls();
       grnltr.Reset( \
@@ -457,6 +496,16 @@ void process_events()
       break;
     case eq.TOG_RND_PAN:
       grnltr.ToggleRandomPan();
+      break;
+    case eq.TOG_RETRIG:
+      if (!grnltr.IsLive()) {
+	retrig = !retrig;
+      }
+      break;
+    case eq.TOG_GATE:
+      if (!grnltr.IsLive()) {
+	gate = !gate;
+      }
       break;
     case eq.NONE:
     default:
@@ -527,14 +576,18 @@ int main(void)
   
   System::Delay(250);
 
-  //hw.seed.StartLog(true);
-  //hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
+#ifdef DEBUG_POD
+  hw.seed.StartLog(true);
+  hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
+#endif
   
   ListDirs(GRNLTR_PATH);
   strcpy(cur_dir_name, GRNLTR_PATH);
   strcat(cur_dir_name, "/");
   strcat(cur_dir_name, &dir_names[cur_dir][0]);
-  //hw.seed.PrintLine("Opening %s", cur_dir_name);
+#ifdef DEBUG_POD
+  hw.seed.PrintLine("Opening %s", cur_dir_name);
+#endif
   ReadWavsFromDir(cur_dir_name);
   
   // unmount
@@ -570,7 +623,8 @@ int main(void)
   mmh.SetSRTCB(mmh.Stop,      RTStopCB);
   mmh.SetSRTCB(mmh.Beat,      RTBeatCB);
   mmh.SetSRTCB(mmh.HalfBeat,  RTHalfBeatCB);
-  mmh.SetMNOHCB(MidiNOHCB);
+  mmh.SetMNOnHCB(MidiNOnHCB);
+  mmh.SetMNOffHCB(MidiNOffHCB);
   mmh.SetMCCHCB(MidiCCHCB);
   mmh.SetMPBHCB(MidiPBHCB);
   

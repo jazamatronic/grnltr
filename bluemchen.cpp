@@ -21,8 +21,8 @@ page_t pages[NUM_PAGES] = {
   {"YELLOW",  "scatter",    "freeze",	  eq.TOG_SCAT,	      eq.TOG_FREEZE}, 
   {"GREEN",   "rnd pitch",  "rnd dens",	  eq.TOG_RND_PITCH,   eq.TOG_RND_DENS}, 
   {"BLUE",    "live rec",   "play rec",	  eq.LIVE_REC,	      eq.LIVE_PLAY}, 
-  {"PURPLE",  "loop",	    "",		  eq.TOG_LOOP,	      eq.NONE}, 
-  {"VIOLET",  "rnd pan",    "",		  eq.TOG_RND_PAN,     eq.NONE} 
+  {"PURPLE",  "loop",	    "retrig",	  eq.TOG_LOOP,	      eq.TOG_RETRIG}, 
+  {"VIOLET",  "gate",	    "rnd pan",    eq.TOG_GATE,	      eq.TOG_RND_PAN} 
 };
 
 page_t setup = {"SETUP", "midi", "browse", eq.INCR_MIDI, eq.NONE};

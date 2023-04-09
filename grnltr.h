@@ -38,6 +38,8 @@
 #define	CC_PAN		    33
 #define	CC_PAN_DIST	    34
 #define	CC_TOG_RND_PAN	    35
+#define	CC_TOG_RETRIG	    36
+#define	CC_TOG_GATE	    37
 //C3
 #define BASE_NOTE	    60
 

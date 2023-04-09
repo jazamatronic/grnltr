@@ -28,6 +28,8 @@ class EventQueue
     INCR_MIDI,
     NEXT_DIR,
     TOG_RND_PAN,
+    TOG_RETRIG,
+    TOG_GATE,
     NONE
   };
 

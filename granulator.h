@@ -205,6 +205,9 @@ class Granulator
       pan_dist_ = pan_dist;
     }
 
+    bool IsLive() {
+      return live_;
+    }
 
     void ToggleRandomPan()
     {

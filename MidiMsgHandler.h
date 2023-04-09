@@ -26,13 +26,20 @@ class MidiMsgHandler
 
     typedef void (*MidiCCHandlerCB)(uint8_t cc, uint8_t val);
 
-    typedef void (*MidiNOHandlerCB)(uint8_t n, uint8_t vel);
+    typedef void (*MidiNOnHandlerCB)(uint8_t n, uint8_t vel);
+
+    typedef void (*MidiNOffHandlerCB)(uint8_t n, uint8_t vel);
 
     typedef void (*MidiPBHandlerCB)(int16_t val);
 
-    void SetMNOHCB(MidiNOHandlerCB cb)
+    void SetMNOnHCB(MidiNOnHandlerCB cb)
     {
-      midi_no_cb_= cb;
+      midi_non_cb_= cb;
+    }
+
+    void SetMNOffHCB(MidiNOffHandlerCB cb)
+    {
+      midi_noff_cb_= cb;
     }
 
     void SetMPBHCB(MidiPBHandlerCB cb)
@@ -172,8 +179,16 @@ class MidiMsgHandler
 	  case daisy::NoteOn:
     	  {
 	    daisy::NoteOnEvent n = m.AsNoteOn();
-	    if (midi_no_cb_ != nullptr) {
-	      midi_no_cb_(n.note, n.velocity);
+	    if (midi_non_cb_ != nullptr) {
+	      midi_non_cb_(n.note, n.velocity);
+	    }
+	    break;
+	  }
+	  case daisy::NoteOff:
+    	  {
+	    daisy::NoteOffEvent n = m.AsNoteOff();
+	    if (midi_noff_cb_ != nullptr) {
+	      midi_noff_cb_(n.note, n.velocity);
 	    }
 	    break;
 	  }
@@ -219,7 +234,8 @@ class MidiMsgHandler
     SystemRealTimeHandler beat_cb_ = 	  nullptr;
     SystemRealTimeHandler half_beat_cb_ = nullptr;
     MidiCCHandlerCB midi_cc_cb_ = nullptr;
-    MidiNOHandlerCB midi_no_cb_ = nullptr;
+    MidiNOnHandlerCB midi_non_cb_ = nullptr;
+    MidiNOffHandlerCB midi_noff_cb_ = nullptr;
     MidiPBHandlerCB midi_pb_cb_ = nullptr;
     MidiMsgHandlerCB midi_cb_ =	  nullptr;
 
