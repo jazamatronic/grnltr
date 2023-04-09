@@ -572,7 +572,21 @@ int main(void)
 #endif
   
   // Mount SD Card
-  f_mount(&fsi.GetSDFileSystem(), "/", 1);
+  if (f_mount(&fsi.GetSDFileSystem(), "/", 1) != FR_OK) {
+#ifdef TARGET_POD
+    hw.led2.Set(CYAN);
+    hw.UpdateLeds();
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("SDCARD?", Font_6x8, true);
+    hw.display.Update();
+#endif
+
+    for(;;) {}
+  }
   
   System::Delay(250);
 
@@ -581,14 +595,58 @@ int main(void)
   hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
 #endif
   
-  ListDirs(GRNLTR_PATH);
+  if (ListDirs(GRNLTR_PATH) < 0) {
+
+#ifdef TARGET_POD
+    hw.led2.Set(LGREEN);
+    hw.UpdateLeds();
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("GRNLTR?", Font_6x8, true);
+    hw.display.Update();
+#endif
+
+    for(;;) {}
+  }
+
   strcpy(cur_dir_name, GRNLTR_PATH);
   strcat(cur_dir_name, "/");
   strcat(cur_dir_name, &dir_names[cur_dir][0]);
 #ifdef DEBUG_POD
   hw.seed.PrintLine("Opening %s", cur_dir_name);
 #endif
-  ReadWavsFromDir(cur_dir_name);
+  if (ReadWavsFromDir(cur_dir_name) < 0) {
+#ifdef TARGET_POD
+    hw.led2.Set(WHITE);
+    hw.UpdateLeds();
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("DIR?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    for(;;) {}
+  }
+
+  if (wav_file_count == 0) {
+#ifdef TARGET_POD
+    hw.led2.Set(ROSE);
+    hw.UpdateLeds();
+#endif
+  
+#ifdef TARGET_BLUEMCHEN
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("WAVS?", Font_6x8, true);
+    hw.display.Update();
+#endif
+    for(;;) {}
+  }
   
   // unmount
   //f_mount(0, "/", 0);
