@@ -24,6 +24,7 @@
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
 #include "grnltr.h"
+#include "status.h"
 
 using namespace daisy;
 using namespace daisysp;
@@ -208,15 +209,10 @@ int ReadWavsFromDir(const char *dir_path)
   live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
   cur_wave = 0;
   
-#ifdef TARGET_POD
-    hw.led1.Set(BLUE);
-#endif
   // Now we'll go through each file and load the WavInfo.
   for(size_t i = 0; i < wav_file_count; i++)
   {
-#ifdef TARGET_POD
-    hw.UpdateLeds();
-#endif
+    Status(READING_WAV);
     // Read the test file from the SD Card.
     if(f_open(&SDFile, wav_file_names[i].name, FA_READ) == FR_OK)
     {
@@ -238,10 +234,6 @@ int ReadWavsFromDir(const char *dir_path)
       wavs_read++;
     }
   }
-#ifdef TARGET_POD
-    hw.led1.Set(OFF);
-    hw.UpdateLeds();
-#endif
   return 0;
 }
 
@@ -250,32 +242,16 @@ void LoadNewDir() {
   strcat(cur_dir_name, "/");
   strcat(cur_dir_name, &dir_names[cur_dir][0]);
   if (ReadWavsFromDir(cur_dir_name) < 0) {
-#ifdef TARGET_POD
-    hw.led2.Set(WHITE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("DIR?", Font_6x8, true);
-    hw.display.Update();
-#endif
+    Status(DIR_ERROR);
+
     for(;;) {
       grnltr_delay(1);
     }
   }
 
   if (wav_file_count == 0) {
-#ifdef TARGET_POD
-    hw.led2.Set(ROSE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("WAVS?", Font_6x8, true);
-    hw.display.Update();
-#endif
+    Status(NO_WAVS);
+
     for(;;) {
       grnltr_delay(1);
     }
@@ -286,16 +262,6 @@ void LoadNewDir() {
     hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
 #endif
 
-#ifdef TARGET_POD
-    hw.led2.Set(LBLUE);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("SIZE?", Font_6x8, true);
-    hw.display.Update();
-#endif
     grnltr_delay(1000);
   }
 }
@@ -611,117 +577,53 @@ int main(void)
   hw.seed.StartLog(true);
 #endif
 
-#ifdef TARGET_POD
-  hw.led1.Set(RED);
-#endif
-#ifdef TARGET_BLUEMCHEN
-  hw.display.Fill(false);
-  hw.display.SetCursor(0, 0);
-  hw.display.WriteString("Manifest", Font_6x8, true);
-  hw.display.SetCursor(0, 10);
-  hw.display.WriteString("awareness", Font_6x8, true);
-  hw.display.Update();
-#endif
+  Status(STARTUP);
 
   grnltr_delay(250);
-
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("SD CFG", cur_dir_name);
-#endif
 
   // Init SD Card
   SdmmcHandler::Config sd_cfg;
   sd_cfg.Defaults();
   sd.Init(sd_cfg);
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("  OK", cur_dir_name);
-#endif
-  
-#ifdef TARGET_POD
-  hw.led1.Set(ORANGE);
-#endif
+  Status(FSI_INIT);
 
   grnltr_delay(250);
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("FSI Init", cur_dir_name);
-#endif
-  
   // Links libdaisy i/o to fatfs driver.
   fsi.Init(FatFSInterface::Config::MEDIA_SD);
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("  OK", cur_dir_name);
-#endif
-  
-#ifdef TARGET_POD
-  hw.led1.Set(YELLOW);
-#endif
+  Status(SD_MOUNT);
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("SD Mount", cur_dir_name);
-#endif
-  
   grnltr_delay(250);
-  
   
   // Mount SD Card
   if (f_mount(&fsi.GetSDFileSystem(), "/", 1) != FR_OK) {
-#ifdef TARGET_POD
-    hw.led2.Set(CYAN);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("SDCARD?", Font_6x8, true);
-    hw.display.Update();
-#endif
+    Status(MOUNT_ERROR);
 
     for(;;) {
       grnltr_delay(1);
     }
   }
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("  OK", cur_dir_name);
-#endif
-  
-  
+  Status(LIST_DIRS);
+
   grnltr_delay(250);
 
-#ifdef DEBUG_POD
-  hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
-#endif
-  
   if (ListDirs(GRNLTR_PATH) < 0) {
-
-#ifdef TARGET_POD
-    hw.led2.Set(LGREEN);
-#endif
-  
-#ifdef TARGET_BLUEMCHEN
-    hw.display.Fill(false);
-    hw.display.SetCursor(0, 0);
-    hw.display.WriteString("GRNLTR?", Font_6x8, true);
-    hw.display.Update();
-#endif
+    Status(NO_GRNLTR_DIR);
 
     for(;;) {
       grnltr_delay(1);
     }
   }
+
+  Status(OK);
 
   LoadNewDir();
 
-  // unmount
-  //f_mount(0, "/", 0);
-  
-#ifdef TARGET_POD
-  hw.led1.Set(PURPLE);
-#endif
-  
+  Status(GRNLTR_INIT);
+
   grnltr.Init(sr, \
       &sm[wav_start_pos[cur_wave]], \
       wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t), \
@@ -749,6 +651,10 @@ int main(void)
   mmh.SetMNOffHCB(MidiNOffHCB);
   mmh.SetMCCHCB(MidiCCHCB);
   mmh.SetMPBHCB(MidiPBHCB);
+
+  grnltr_delay(250);
+
+  Status(OK);
   
   // GO!
   hw_start(AudioCallback);

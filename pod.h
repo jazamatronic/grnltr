@@ -6,6 +6,8 @@
 #include "params.h"
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
+#include "grnltr.h"
+#include "status.h"
 
 #define LONG_PRESS 512
 
@@ -23,3 +25,4 @@ void UpdateEncoder(int8_t cur_page);
 void UpdateUI(int8_t cur_page);
 void UpdateButtons(int8_t cur_page);
 void Controls(int8_t cur_page);
+void Status(status_t status);

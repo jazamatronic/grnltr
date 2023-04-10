@@ -7,6 +7,7 @@
 #include "MidiMsgHandler.h"
 #include "EventQueue.h"
 #include "grnltr.h"
+#include "status.h"
 
 #define MAX_STRING 11 // 10 chars 6px wide + terminating \0
 
@@ -28,6 +29,7 @@ void hw_start(AudioHandle::AudioCallback cb);
 void UpdateEncoder(int8_t cur_page);
 void UpdateUI(int8_t cur_page);
 void Controls(int8_t cur_page);
+void Status(status_t status);
 
 typedef struct {
   char const *page;

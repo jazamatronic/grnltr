@@ -8,7 +8,6 @@ typedef struct {
 } sample_t;
 
 
-// TODO: make it stereo and include pan/width/random pan
 template <typename T>
 class Grain
 {

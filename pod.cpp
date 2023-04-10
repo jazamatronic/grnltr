@@ -243,3 +243,83 @@ void hw_start(AudioHandle::AudioCallback cb) {
   hw.StartAudio(cb);
   hw.midi.StartReceive();
 }
+
+void Status(status_t status)
+{
+  switch(status) 
+  {
+    case STARTUP:
+      hw.led1.Set(RED);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("SD CFG");
+    #endif
+      break;
+    case FSI_INIT:
+      hw.led1.Set(ORANGE);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  OK");
+      hw.seed.PrintLine("FSI Init");
+    #endif
+      break;
+    case SD_MOUNT:
+      hw.led1.Set(YELLOW);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  OK");
+      hw.seed.PrintLine("SD Mount");
+    #endif
+      break;
+    case MOUNT_ERROR:
+      hw.led2.Set(CYAN);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  FAILED!");
+    #endif
+      break;
+    case LIST_DIRS:
+      hw.led1.Set(GREEN);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  OK");
+      hw.seed.PrintLine("Searching %s", GRNLTR_PATH);
+    #endif
+      break;
+    case NO_GRNLTR_DIR:
+      hw.led2.Set(LGREEN);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("%s not found or empty!", GRNLTR_PATH);
+    #endif
+      break;
+    case DIR_ERROR:
+      hw.led2.Set(WHITE);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  DIR read error");
+    #endif
+      break;
+    case NO_WAVS:
+      hw.led2.Set(ROSE);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  No WAVs found");
+    #endif
+      break;
+    case READING_WAV:
+      hw.led1.Set(BLUE);
+      break;
+    case MISSING_WAV:
+      hw.led2.Set(LBLUE);
+      break;
+    case OK:
+      hw.led1.Set(OFF);
+      hw.led2.Set(OFF);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("  OK");
+    #endif
+      break;
+    case GRNLTR_INIT:
+      hw.led1.Set(PURPLE);
+    #ifdef DEBUG_POD
+      hw.seed.PrintLine("Initializing GRNLTR");
+    #endif
+      break;
+    default:
+      break;
+  }
+  hw.UpdateLeds();
+}

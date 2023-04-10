@@ -175,3 +175,52 @@ void hw_start(AudioHandle::AudioCallback cb) {
   hw.StartAudio(cb);
   hw.midi.StartReceive();
 }
+
+void Status(status_t status)
+{
+  hw.display.Fill(false);
+  hw.display.SetCursor(0, 0);
+  switch(status) 
+  {
+    case STARTUP:
+      hw.display.WriteString("Manifest", Font_6x8, true);
+      hw.display.SetCursor(0, 10);
+      hw.display.WriteString("awareness", Font_6x8, true);
+      break;
+    case MOUNT_ERROR:
+      hw.display.WriteString("SDCARD?", Font_6x8, true);
+      break;
+    case NO_GRNLTR_DIR:
+      hw.display.WriteString("GRNLTR?", Font_6x8, true);
+      break;
+    case DIR_ERROR:
+      hw.display.WriteString("DIR?", Font_6x8, true);
+      break;
+    case NO_WAVS:
+      hw.display.WriteString("WAVS?", Font_6x8, true);
+      break;
+    case READING_WAV:
+      hw.display.WriteString("LOADING..", Font_6x8, true);
+      break;
+    case MISSING_WAV:
+      hw.display.WriteString("SIZE?", Font_6x8, true);
+      break;
+    case FSI_INIT:
+      hw.display.WriteString("~.~", Font_6x8, true);
+      break;
+    case SD_MOUNT:
+      hw.display.WriteString("/o/", Font_6x8, true);
+      break;
+    case LIST_DIRS:
+      hw.display.WriteString("|O|", Font_6x8, true);
+      break;
+    case OK:
+      break;
+    case GRNLTR_INIT:
+      hw.display.WriteString("Done.", Font_6x8, true);
+      break;
+    default:
+      break;
+  }
+  hw.display.Update();
+}
