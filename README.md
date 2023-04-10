@@ -11,18 +11,18 @@ Jared ANDERSON
 
 grnltr - a Granulator
 
-Initial build for the Daisy Seed platform running on the pod 
-Now supports Bluemchen as a build target.  
-
-```
-$ make BUILD_TARGET=bluemchen
-$ make BUILD_TARGET=bluemchen program-dfu
-```
+Initial build for the Daisy Seed platform running on the [pod](https://www.electro-smith.com/daisy/pod).   
+Now supports [kxmx_bluemchen](https://kxmx-bluemchen.recursinging.com/) as a build target.  
 
 Clone this under the DaisyExamples/pod directory and run make to build.  
 You should also init the kxmx_bluemchen submodule if you wish to target the bluemchen.  
 
 Default make will build for the pod, to build for bluemchen use:  
+
+```
+$ make BUILD_TARGET=bluemchen
+$ make BUILD_TARGET=bluemchen program-dfu
+```
 
 Up to 64 Banks of 16 WAV files (total sample size per bank must be < 64MB) from an SDMMC card can be read then be granulated.  
 Banks should be in separate directories under the /grnltr directory of the SDMMC card.  
