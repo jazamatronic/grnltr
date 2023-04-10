@@ -38,7 +38,7 @@ Once engaged, the buffer will fill once before grain processing starts.
 Some parameters are disabled in this mode.
 
 Parameters are paged and the current page is indicated by the colour of LED1. Turn the encoder to change pages.  
-Pressing the encoder will cycle the current sample.  This can also be done by seinding MIDI NoteOn - From Note 60 (C3)  
+Pressing the encoder will cycle the current sample.  This can also be done by sending MIDI NoteOn - From Note 60 (C3)  
 MIDI parameters are accepted no matter what page is currently active.  
 Knobs and MIDI CC messages are in "catch" mode.  
 For Toggle parameters, send any CC value to toggle.
@@ -72,6 +72,6 @@ A demo and feature walkthrough of the v0.7 version available, click here:
 ## TODO  
 Add recording capability: this is somewhat addressed in a passthrough mode. Recording a set number of bars and then writing to SD is not yet implemented.    
 ~~Add MIDI control~~    
-Add Directory Browsing - Need a screen - target kxmx_bluemchen   
+~~Add Directory Browsing - Need a screen - target kxmx_bluemchen~~   
 ~~Provide a Demo~~  
   
