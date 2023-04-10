@@ -258,6 +258,7 @@ void LoadNewDir() {
   }
 
   if (wavs_read != wav_file_count) {
+    Status(MISSING_WAV);
 #ifdef DEBUG_POD
     hw.seed.PrintLine("Missing WAV? %d:%d", wavs_read, wav_file_count);
 #endif
