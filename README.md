@@ -14,6 +14,8 @@ grnltr - a Granulator
 Initial build for the Daisy Seed platform running on the [pod](https://www.electro-smith.com/daisy/pod).   
 Now supports [kxmx_bluemchen](https://kxmx-bluemchen.recursinging.com/) as a build target.  
 
+TLDR: Grab a .bin from the [Releases](https://github.com/jazamatronic/grnltr/releases) page and either follow the dfu instructions there or use the [Daisy Web Programmer](https://electro-smith.github.io/Programmer/) to transfer the binary to your pod/bluemchen.
+
 Clone this under the DaisyExamples/pod directory and run make to build.  
 You should also init the kxmx_bluemchen submodule if you wish to target the bluemchen.  
 
