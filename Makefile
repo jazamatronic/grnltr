@@ -35,7 +35,12 @@ ifeq "$(BUILD_TARGET)" "pod"
 C_DEFS += -DTARGET_POD
 endif
 
+VERSION = $(shell git tag --sort=v:refname | tail -n1)
 ifdef DEBUG_POD 
 C_DEFS += -DDEBUG_POD
+VERSION := $(VERSION)-dbg
 endif
+C_DEFS += -DVER=\"$(VERSION)\"
 
+release: build/$(TARGET).bin
+	cp build/$(TARGET).bin rel/$(TARGET).$(VERSION).bin

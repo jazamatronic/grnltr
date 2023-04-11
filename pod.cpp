@@ -251,6 +251,7 @@ void Status(status_t status)
     case STARTUP:
       hw.led1.Set(RED);
     #ifdef DEBUG_POD
+      hw.seed.PrintLine("GRNLTR %s", VER);
       hw.seed.PrintLine("SD CFG");
     #endif
       break;

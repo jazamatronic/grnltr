@@ -98,21 +98,6 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 {
   sample_t sample;
 
-  grnltr.SetGrainPitch(grnltr_params.GrainPitch);
-  grnltr.SetScanRate(grnltr_params.ScanRate);
-  grnltr.SetGrainDuration(grnltr_params.GrainDur);
-  grnltr.SetDensity(grnltr_params.GrainDens);
-  grnltr.SetScatterDist(grnltr_params.ScatterDist);
-  grnltr.SetPitchDist(grnltr_params.PitchDist);
-  grnltr.SetSampleStart(grnltr_params.SampleStart);
-  grnltr.SetSampleEnd(grnltr_params.SampleEnd);
-  grnltr.SetPan(grnltr_params.Pan);
-  grnltr.SetPanDist(grnltr_params.PanDist);
-  crush_l.SetBitcrushFactor(grnltr_params.Crush);
-  crush_l.SetDownsampleFactor(grnltr_params.DownSample);
-  crush_r.SetBitcrushFactor(grnltr_params.Crush);
-  crush_r.SetDownsampleFactor(grnltr_params.DownSample);
-
   //audio
   for(size_t i = 0; i < size; i++)
   {
@@ -563,6 +548,25 @@ void InitControls()
   pan_dist_p.Init(	  6,  DEFAULT_PAN_DIST,         0.0f,   1.0f, PARAM_THRESH);
 }
 
+void Parameters() {
+
+  grnltr.SetGrainPitch(grnltr_params.GrainPitch);
+  grnltr.SetScanRate(grnltr_params.ScanRate);
+  grnltr.SetGrainDuration(grnltr_params.GrainDur);
+  grnltr.SetDensity(grnltr_params.GrainDens);
+  grnltr.SetScatterDist(grnltr_params.ScatterDist);
+  grnltr.SetPitchDist(grnltr_params.PitchDist);
+  grnltr.SetSampleStart(grnltr_params.SampleStart);
+  grnltr.SetSampleEnd(grnltr_params.SampleEnd);
+  grnltr.SetPan(grnltr_params.Pan);
+  grnltr.SetPanDist(grnltr_params.PanDist);
+  crush_l.SetBitcrushFactor(grnltr_params.Crush);
+  crush_l.SetDownsampleFactor(grnltr_params.DownSample);
+  crush_r.SetBitcrushFactor(grnltr_params.Crush);
+  crush_r.SetDownsampleFactor(grnltr_params.DownSample);
+}
+
+
 int main(void)
 {
   rectangular_window(rect_env, GRAIN_ENV_SIZE);
@@ -691,6 +695,8 @@ int main(void)
     now = hw.seed.system.GetNow();
     if ((now - loop_dly > MAIN_LOOP_DLY) || (now < loop_dly)) {
       Controls(cur_page);
+      // hi tele_player
+      Parameters();
 
       blink_cnt &= blink_mask;
       if (blink_cnt == 0) {

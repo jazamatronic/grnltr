@@ -186,6 +186,8 @@ void Status(status_t status)
       hw.display.WriteString("Manifest", Font_6x8, true);
       hw.display.SetCursor(0, 10);
       hw.display.WriteString("awareness", Font_6x8, true);
+      hw.display.SetCursor(0, 20);
+      hw.display.WriteString(VER, Font_6x8, true);
       break;
     case MOUNT_ERROR:
       hw.display.WriteString("SDCARD?", Font_6x8, true);
