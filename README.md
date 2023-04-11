@@ -17,9 +17,11 @@ Now supports [kxmx_bluemchen](https://kxmx-bluemchen.recursinging.com/) as a bui
 Clone this under the DaisyExamples/pod directory and run make to build.  
 You should also init the kxmx_bluemchen submodule if you wish to target the bluemchen.  
 
-Default make will build for the pod, to build for bluemchen use:  
+Default make will build for the pod, to build for bluemchen, initialize and update the kxmx_bluemchen submodule then make with `BUILD_TARGET=bluemchen`:  
 
 ```
+$ git submodule init 
+$ git submodule update 
 $ make BUILD_TARGET=bluemchen
 $ make BUILD_TARGET=bluemchen program-dfu
 ```
