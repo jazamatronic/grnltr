@@ -17,6 +17,7 @@ Now supports [kxmx_bluemchen](https://kxmx-bluemchen.recursinging.com/) as a bui
 TLDR: Grab a .bin from the [Releases](https://github.com/jazamatronic/grnltr/releases) page and either follow the dfu instructions there or use the [Daisy Web Programmer](https://electro-smith.github.io/Programmer/) to transfer the binary to your pod/bluemchen.
 
 Clone this under the DaisyExamples/pod directory and run make to build.  
+N.B. The binaries in the Release are built against the `fix/uart-rx-dma-mode` libDaisy branch.  
 You should also init the kxmx_bluemchen submodule if you wish to target the bluemchen.  
 
 Default make will build for the pod, to build for bluemchen, initialize and update the kxmx_bluemchen submodule then make with `BUILD_TARGET=bluemchen`:  

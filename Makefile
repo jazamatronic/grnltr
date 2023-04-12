@@ -43,4 +43,5 @@ endif
 C_DEFS += -DVER=\"$(VERSION)\"
 
 release: build/$(TARGET).bin
+	mkdir -p rel
 	cp build/$(TARGET).bin rel/$(TARGET).$(VERSION).bin
