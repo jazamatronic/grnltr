@@ -16,6 +16,7 @@
 #include "fatfs.h"
 #include "led_colours.h"
 #include "Effects/decimator.h"
+#include "Utility/delayline.h"
 #include "grain.h"
 #include "params.h"
 #include "windows.h"
@@ -31,6 +32,8 @@ using namespace daisysp;
 static Granulator grnltr;
 static Decimator crush_l;
 static Decimator crush_r;
+static DelayLine<float, MAX_DELAY> dell;
+static DelayLine<float, MAX_DELAY> delr;
 MidiMsgHandler<HW_TYPE> mmh;
 EventQueue<QUEUE_LENGTH> eq;
 
@@ -70,7 +73,7 @@ int8_t	cur_dir = 0;
 
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-	    sample_end_p, pan_p, pan_dist_p;
+	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, dly_fbk_p;
 
 int8_t cur_page = 0;
 
@@ -95,7 +98,7 @@ bool gate = false;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
-  sample_t sample;
+  sample_t sample, delay;
 
   //audio
   for(size_t i = 0; i < size; i++)
@@ -103,11 +106,15 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
     sample = grnltr.Process(f2s16(in[0][i]));
     sample.l = crush_l.Process(sample.l);
     sample.r = crush_r.Process(sample.r);
-    // crush wet/dry amount? 
-    // maybe add a filter here 
-    // or some dly with feedback?
-    out[0][i] = sample.l;
-    out[1][i] = sample.r;
+
+    delay.l = dell.Read();
+    delay.r = delr.Read();
+
+    dell.Write((grnltr_params.DelayFbk * delay.l) + sample.l);
+    delr.Write((grnltr_params.DelayFbk * delay.r) + sample.r);
+    
+    out[0][i] = (grnltr_params.DelayMix * delay.l) + ((1.0f - grnltr_params.DelayMix) * sample.l);
+    out[1][i] = (grnltr_params.DelayMix * delay.r) + ((1.0f - grnltr_params.DelayMix) * sample.r);
   }
 }
 
@@ -606,10 +613,12 @@ void InitControls()
   downsample_p.Init(      5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
   pan_p.Init(		  6,  DEFAULT_PAN,              0.0f,   1.0f, PARAM_THRESH);
   pan_dist_p.Init(	  6,  DEFAULT_PAN_DIST,         0.0f,   1.0f, PARAM_THRESH);
+  dly_mix_p.Init(	  7,  DEFAULT_MIX,		0.0f,   1.0f, PARAM_THRESH);
+  dly_time_p.Init( 	  7,  DEFAULT_DLY,		0.0f,   1.0f, PARAM_THRESH);
+  dly_fbk_p.Init(	  8,  DEFAULT_FBK,		0.0f,   1.0f, PARAM_THRESH);
 }
 
 void Parameters() {
-
   grnltr.SetGrainPitch(grnltr_params.GrainPitch);
   grnltr.SetScanRate(grnltr_params.ScanRate);
   grnltr.SetGrainDuration(grnltr_params.GrainDur);
@@ -624,6 +633,8 @@ void Parameters() {
   crush_l.SetDownsampleFactor(grnltr_params.DownSample);
   crush_r.SetBitcrushFactor(grnltr_params.Crush);
   crush_r.SetDownsampleFactor(grnltr_params.DownSample);
+  dell.SetDelay(sr * grnltr_params.DelayTime);
+  delr.SetDelay(sr * grnltr_params.DelayTime);
 }
 
 
@@ -702,6 +713,11 @@ int main(void)
   crush_l.SetDownsampleFactor(0.0f);
   crush_r.Init();
   crush_r.SetDownsampleFactor(0.0f);
+
+  dell.Init();
+  dell.SetDelay(sr * 0.5f);
+  delr.Init();
+  delr.SetDelay(sr * 0.5f);
 
   InitControls();
 

@@ -118,6 +118,19 @@ void UpdateUI(int8_t cur_page)
            * b2 = Toggle random pan
            */
           break;
+        case 7:
+          hw.led1.Set(ROSE);
+          /*
+           * k1 = delay mix
+           * k2 = delay time
+           */
+          break;
+        case 8:
+          hw.led1.Set(LGREEN);
+          /*
+           * k1 = delay fbk
+           */
+          break;
         default:
           hw.led1.Set(WHITE);
           break;
@@ -228,6 +241,9 @@ void Controls(int8_t cur_page)
   grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
   grnltr_params.Pan =	       pan_p.Process(k1, cur_page);
   grnltr_params.PanDist =      pan_dist_p.Process(k2, cur_page);
+  grnltr_params.DelayMix =     dly_mix_p.Process(k1, cur_page);
+  grnltr_params.DelayTime =    dly_time_p.Process(k2, cur_page);
+  grnltr_params.DelayFbk =     dly_fbk_p.Process(k1, cur_page);
 }
 
 float hw_init() {
