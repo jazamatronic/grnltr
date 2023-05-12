@@ -4,7 +4,7 @@
 void gaussian_window(float *mem, size_t len, float sigma)
 {
   for (size_t i = 0; i < len; i++) {
-    mem[i] = exp( -0.5 * pow(((i - len/2) / (sigma * len/2)), 2));
+    mem[i] = expf( -0.5 * pow(((i - len/2) / (sigma * len/2)), 2));
   }
 }
 
@@ -72,7 +72,7 @@ void blackman_var_window(float *mem, size_t len, float a0, float a1, float a2, f
 void expodec_window(float *expo, float *rexpo, size_t len, float tau)
 {
   float n;
-  float offset = exp(-1.0 / tau);
+  float offset = expf(-1.0 / tau);
   for (size_t i = 0; i < len; i++) {
     n = expf(-((float)i / len) / tau) - offset;
     // yes, I could just play it in reverse, and may do so if I run out of memory
