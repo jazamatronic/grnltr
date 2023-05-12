@@ -80,7 +80,7 @@ float sr;
 
 SdmmcHandler   sd;
 FatFSInterface fsi;
-FIL            SDFile;
+FIL            SDFile; // Needs to be global to work https://forum.electro-smith.com/t/fatfs-f-read-returns-fr-disk-err/2883
 
 grnltr_params_t grnltr_params;
 
@@ -153,8 +153,8 @@ int ReadWavsFromDir(const char *dir_path)
 {
   DIR dir;
   FILINFO fno;
-  FIL f;
   char line_buf[LINE_BUF_SIZE];
+  char path_buf[LINE_BUF_SIZE];
   char *fn;
   char *tokens[5];
 
@@ -167,32 +167,34 @@ int ReadWavsFromDir(const char *dir_path)
   hw.seed.PrintLine("Opening %s", cur_dir_name);
 #endif
 
-  // See /data/daisy/DaisyExamples-sm/libDaisy/src/hid/wavplayer.*
-  // Open Dir and scan for files.
-  if(f_opendir(&dir, dir_path) != FR_OK)
-  {
-      return -1;
-  }
-  if (f_stat("grnltr.cfg", &fno) == FR_OK) {
+  strcpy(path_buf, dir_path);
+  strcat(path_buf, "/grnltr.cfg");
+  if (f_stat(path_buf, &fno) == FR_OK) {
 #ifdef DEBUG_POD
-    hw.seed.PrintLine("Found grnltr.cfg");
+    hw.seed.PrintLine("Found %s", path_buf);
 #endif
-    if (f_open(&f, "grnltr.cfg", FA_READ) != FR_OK) {
+    if (f_open(&SDFile, path_buf, FA_READ) != FR_OK) {
       return -1;
     }
     // grab header
-    f_gets(line_buf, sizeof line_buf, &f);
-    while (f_gets(line_buf, sizeof line_buf, &f)) {
+    if (!f_gets(line_buf, LINE_BUF_SIZE, &SDFile)) {
+#ifdef DEBUG_POD
+      hw.seed.PrintLine("Error %d reading %s", f_error(&SDFile), path_buf);
+#endif
+      return -1;
+    }
+    while (f_gets(line_buf, LINE_BUF_SIZE, &SDFile) && (wav_file_count < MAX_WAVES)) {
       int i = 0;
       tokens[i] = strtok(line_buf, ",");
       while (tokens[i] != NULL) {
 	tokens[++i] = strtok(NULL, ",");
       }	
-      if (f_stat(tokens[0], &fno) == FR_OK) {
+      strcpy(path_buf, dir_path);
+      strcat(path_buf, "/");
+      strcat(path_buf, tokens[0]);
+      if (f_stat(path_buf, &fno) == FR_OK) {
 	fn = fno.fname;
-        strcpy(wav_info[wav_file_count].wav_file_hdr.name, dir_path);
-        strcat(wav_info[wav_file_count].wav_file_hdr.name, "/");
-        strcat(wav_info[wav_file_count].wav_file_hdr.name, fn);
+        strcpy(wav_info[wav_file_count].wav_file_hdr.name, path_buf);
 #ifdef DEBUG_POD
         hw.seed.PrintLine("  %s : %s", fno.fname, wav_info[wav_file_count].wav_file_hdr.name);
 #endif
@@ -202,7 +204,14 @@ int ReadWavsFromDir(const char *dir_path)
         wav_file_count++;
       }
     }
+    f_close(&SDFile);
   } else {
+    // See /data/daisy/DaisyExamples-sm/libDaisy/src/hid/wavplayer.*
+    // Open Dir and scan for files.
+    if(f_opendir(&dir, dir_path) != FR_OK)
+    {
+        return -1;
+    }
     while((f_readdir(&dir, &fno) == FR_OK) && (wav_file_count < MAX_WAVES)) {
       // Exit if NULL fname
       if(fno.fname[0] == 0)
@@ -226,8 +235,8 @@ int ReadWavsFromDir(const char *dir_path)
         wav_file_count++;
       }
     }
+    f_closedir(&dir);
   }
-  f_closedir(&dir);
 
   cur_sm_bytes = sizeof(int16_t) * MAX_GRAIN_DUR * sr * MAX_GRAIN_PITCH * 2;
   live_rec_buf_len = cur_sm_bytes / sizeof(int16_t);
