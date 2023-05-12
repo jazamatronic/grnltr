@@ -104,6 +104,9 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
     sample = grnltr.Process(f2s16(in[0][i]));
     sample.l = crush_l.Process(sample.l);
     sample.r = crush_r.Process(sample.r);
+    // crush wet/dry amount? 
+    // maybe add a filter here 
+    // or some dly with feedback?
     out[0][i] = sample.l;
     out[1][i] = sample.r;
   }

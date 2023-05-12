@@ -31,7 +31,6 @@ typedef struct {
   float	  GrainPitch;
   float   ScanRate;
   float   GrainDur;
-  int32_t GrainDens;
   float	  ScatterDist;
   float	  PitchDist;
   float	  SampleStart;
@@ -40,6 +39,7 @@ typedef struct {
   float	  DownSample;
   float	  Pan;
   float	  PanDist;
+  int32_t GrainDens;
 } grnltr_params_t;
 
 extern grnltr_params_t grnltr_params;

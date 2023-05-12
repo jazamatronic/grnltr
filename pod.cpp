@@ -2,7 +2,6 @@
 #include "led_colours.h"
 #include "EventQueue.h"
 
-// TODO: add midi channel incr and basic bank browsing, like on the bluemchen
 DaisyPod hw;
 static Parameter knob1, knob2;
 uint32_t last_ui_update = 0;
