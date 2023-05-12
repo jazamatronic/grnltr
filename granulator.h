@@ -14,14 +14,14 @@ class Granulator
     Granulator() {}
     ~Granulator() {}
 
-    void Init(float sr, int16_t *start, size_t len, float *env, size_t env_len) 
+    void Init(float sr, int16_t *start, size_t len, float *env, size_t env_len, bool loop, bool rev) 
     {
       sr_ = sr;
       sample_start_ = start;
       len_ = len;
       env_mem_ = env;
       env_len_ = env_len;
-      Setup();
+      Setup(loop, rev);
       live_ = filled_ = false;
       rng.Init();
     }
@@ -43,11 +43,11 @@ class Granulator
       stop_ = false;
     }
 
-    void Reset(int16_t *start, size_t len) 
+    void Reset(int16_t *start, size_t len, bool loop, bool rev) 
     {
       sample_start_ = start;
       len_ = len;
-      Setup();
+      Setup(loop, rev);
       live_ = filled_ = false;
     }
 
@@ -64,7 +64,7 @@ class Granulator
       len_ = len;
       record_buf_ = sample_start_;
       write_pos_ = 0;
-      Setup();
+      Setup(false, false);
       live_ = true;
       filled_ = false;
     }
@@ -123,11 +123,11 @@ class Granulator
 	if (silo[i].IsDone()) {
 	  if (random_pitch_) {
 	    rand = rng.Process();
-	    pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0 + (rand * pitch_dist_))));
+	    pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0f + (rand * pitch_dist_))));
 	  }
 	  if (random_pan_) {
 	    rand = rng.Process();
-	    pan = fminf(1.0f, fmaxf(0.0f, pan + (0.5 * rand * pan_dist_)));
+	    pan = fminf(1.0f, fmaxf(0.0f, pan + (0.5f * rand * pan_dist_)));
 	  }
 	  silo[i].Dispatch(sample_pos, grain_dur_, env_mem_, pitch, pan, reverse_grain_);
 	  return;
@@ -281,11 +281,11 @@ class Granulator
 
   private:
 
-    void Setup()
+    void Setup(bool loop, bool rev)
     {
       sample_pos_.Init(sr_, len_);
-      sample_pos_.ToggleLoop();
-      sample_loop_ = true;
+      sample_loop_ = loop;
+      sample_pos_.SetLoop(sample_loop_);
       density_count_ = -1;
       SetGrainDuration(DEFAULT_GRAIN_DUR);
       SetGrainPitch(DEFAULT_GRAIN_PITCH);
@@ -295,7 +295,9 @@ class Granulator
       SetPitchDist(DEFAULT_PITCH_DIST);
       SetPan(DEFAULT_PAN);
       SetPanDist(DEFAULT_PAN_DIST);
-      stop_ = random_pitch_ = scatter_grain_ = reverse_grain_ = random_density_ = random_pan_ = false;
+      reverse_grain_ = rev;
+      sample_pos_.SetReverse(rev);
+      stop_ = random_pitch_ = scatter_grain_ = random_density_ = random_pan_ = false;
       for (size_t i = 0; i < MAX_GRAINS; i++) {
 	silo[i].Init(sr_, sample_start_, len_, DEFAULT_GRAIN_VOL, env_mem_, env_len_);
       }

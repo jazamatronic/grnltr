@@ -26,6 +26,9 @@ USE_FATFS = 1
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
 
+# Optimize for size - slaps pod, you can fit so many grains into this thing
+CFLAGS += -Os
+
 ifeq "$(BUILD_TARGET)" "bluemchen"
 C_DEFS += -DTARGET_BLUEMCHEN
 C_INCLUDES += -I$(BLUEMCHEN_DIR)/src

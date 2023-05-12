@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/wav_format.h"
+
 #define GRAIN_ENV_SIZE 1024
 #define NUM_GRAIN_ENVS 6
 
@@ -7,6 +9,7 @@
 #define MAX_DIRS	64
 #define MAX_DIR_LENGTH  64
 #define MAX_WAVES	16
+#define LINE_BUF_SIZE	128
 
 #define CP_BUF_SIZE 8192
 
@@ -46,4 +49,11 @@
 // 33mS - something like 30Hz
 #define MAIN_LOOP_DLY	   33 
 
+typedef struct {
+  WavFileInfo wav_file_hdr;
+  size_t      wav_start_pos;
+  float	      bpm;
+  bool	      loop;
+  bool	      rev;
+} wav_info_t;
 

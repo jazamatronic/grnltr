@@ -15,7 +15,6 @@
 
 #include "fatfs.h"
 #include "led_colours.h"
-#include "util/wav_format.h"
 #include "Effects/decimator.h"
 #include "grain.h"
 #include "params.h"
@@ -58,9 +57,9 @@ size_t live_rec_buf_len;
 // Buffer for copying wav files to SDRAM
 char buf[CP_BUF_SIZE];
 
-WavFileInfo wav_file_names[MAX_WAVES];
+wav_info_t wav_info[MAX_WAVES];
+
 uint8_t	    wav_file_count = 0;
-size_t	    wav_start_pos[MAX_WAVES];
 int8_t	    cur_wave = 0;
 int8_t	    wavs_read = 0;
 
@@ -154,7 +153,10 @@ int ReadWavsFromDir(const char *dir_path)
 {
   DIR dir;
   FILINFO fno;
+  FIL f;
+  char line_buf[LINE_BUF_SIZE];
   char *fn;
+  char *tokens[5];
 
   size_t bytesread;
 
@@ -171,24 +173,58 @@ int ReadWavsFromDir(const char *dir_path)
   {
       return -1;
   }
-  while((f_readdir(&dir, &fno) == FR_OK) && (wav_file_count < MAX_WAVES)) {
-    // Exit if NULL fname
-    if(fno.fname[0] == 0)
-        break;
-    // Skip if its a directory or a hidden file.
-    if(fno.fattrib & (AM_HID | AM_DIR))
-        continue;
-    // Now we'll check if its .wav and add to the list.
-    fn = fno.fname;
-    if(strstr(fn, ".wav") || strstr(fn, ".WAV"))
-    {
-      strcpy(wav_file_names[wav_file_count].name, dir_path);
-      strcat(wav_file_names[wav_file_count].name, "/");
-      strcat(wav_file_names[wav_file_count].name, fn);
+  if (f_stat("grnltr.cfg", &fno) == FR_OK) {
 #ifdef DEBUG_POD
-      hw.seed.PrintLine("  %s : %s", fno.fname, wav_file_names[wav_file_count].name);
+    hw.seed.PrintLine("Found grnltr.cfg");
 #endif
-      wav_file_count++;
+    if (f_open(&f, "grnltr.cfg", FA_READ) != FR_OK) {
+      return -1;
+    }
+    // grab header
+    f_gets(line_buf, sizeof line_buf, &f);
+    while (f_gets(line_buf, sizeof line_buf, &f)) {
+      int i = 0;
+      tokens[i] = strtok(line_buf, ",");
+      while (tokens[i] != NULL) {
+	tokens[++i] = strtok(NULL, ",");
+      }	
+      if (f_stat(tokens[0], &fno) == FR_OK) {
+	fn = fno.fname;
+        strcpy(wav_info[wav_file_count].wav_file_hdr.name, dir_path);
+        strcat(wav_info[wav_file_count].wav_file_hdr.name, "/");
+        strcat(wav_info[wav_file_count].wav_file_hdr.name, fn);
+#ifdef DEBUG_POD
+        hw.seed.PrintLine("  %s : %s", fno.fname, wav_info[wav_file_count].wav_file_hdr.name);
+#endif
+	wav_info[wav_file_count].bpm  = atof(tokens[1]);
+	wav_info[wav_file_count].loop = (strcmp(tokens[2], "True") == 0);
+	wav_info[wav_file_count].rev  = (strcmp(tokens[3], "True") == 0);
+        wav_file_count++;
+      }
+    }
+  } else {
+    while((f_readdir(&dir, &fno) == FR_OK) && (wav_file_count < MAX_WAVES)) {
+      // Exit if NULL fname
+      if(fno.fname[0] == 0)
+          break;
+      // Skip if its a directory or a hidden file.
+      if(fno.fattrib & (AM_HID | AM_DIR))
+          continue;
+      // Now we'll check if its .wav and add to the list.
+      fn = fno.fname;
+      if(strstr(fn, ".wav") || strstr(fn, ".WAV"))
+      {
+        strcpy(wav_info[wav_file_count].wav_file_hdr.name, dir_path);
+        strcat(wav_info[wav_file_count].wav_file_hdr.name, "/");
+        strcat(wav_info[wav_file_count].wav_file_hdr.name, fn);
+#ifdef DEBUG_POD
+        hw.seed.PrintLine("  %s : %s", fno.fname, wav_info[wav_file_count].wav_file_hdr.name);
+#endif
+	wav_info[wav_file_count].bpm  = DEFAULT_BPM;
+	wav_info[wav_file_count].loop = true;
+	wav_info[wav_file_count].rev  = false;
+        wav_file_count++;
+      }
     }
   }
   f_closedir(&dir);
@@ -202,14 +238,14 @@ int ReadWavsFromDir(const char *dir_path)
   {
     Status(READING_WAV);
     // Read the test file from the SD Card.
-    if(f_open(&SDFile, wav_file_names[i].name, FA_READ) == FR_OK)
+    if(f_open(&SDFile, wav_info[i].wav_file_hdr.name, FA_READ) == FR_OK)
     {
       // TODO: Add checks here to ensure we can deal with the wav file correctly
-      f_read(&SDFile, (void *)&wav_file_names[i].raw_data, sizeof(WAV_FormatTypeDef), &bytesread);
-      size_t wav_size = wav_file_names[i].raw_data.SubCHunk2Size;
+      f_read(&SDFile, (void *)&wav_info[i].wav_file_hdr.raw_data, sizeof(WAV_FormatTypeDef), &bytesread);
+      size_t wav_size = wav_info[i].wav_file_hdr.raw_data.SubCHunk2Size;
       if ((cur_sm_bytes + wav_size) > sm_size) break;
       size_t this_wav_start_pos = (cur_sm_bytes / sizeof(int16_t)) + 1;
-      wav_start_pos[i] = this_wav_start_pos;
+      wav_info[i].wav_start_pos = this_wav_start_pos;
 
       do {
 	f_read(&SDFile, (void *)buf, CP_BUF_SIZE, &bytesread);
@@ -261,8 +297,10 @@ void RTStartCB()
 {
   InitControls();
   grnltr.Reset( \
-      &sm[wav_start_pos[cur_wave]], \
-      wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+      &sm[wav_info[cur_wave].wav_start_pos], \
+      wav_info[cur_wave].wav_file_hdr.raw_data.SubCHunk2Size / sizeof(int16_t), \
+      wav_info[cur_wave].loop, wav_info[cur_wave].rev);
+  sample_bpm = wav_info[cur_wave].bpm;
   grnltr.Dispatch(0);
 }
 
@@ -406,8 +444,10 @@ void MidiNOnHCB(uint8_t n, uint8_t vel)
       grnltr.Stop();
       InitControls();
       grnltr.Reset( \
-          &sm[wav_start_pos[cur_wave]], \
-          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+          &sm[wav_info[cur_wave].wav_start_pos], \
+          wav_info[cur_wave].wav_file_hdr.raw_data.SubCHunk2Size / sizeof(int16_t), \
+	  wav_info[cur_wave].loop, wav_info[cur_wave].rev);
+      sample_bpm = wav_info[cur_wave].bpm;
       grnltr.Dispatch(0);
     } else {
       if (retrig) {
@@ -449,8 +489,8 @@ void process_events()
       grnltr.ChangeEnv(grain_envs[cur_grain_env]);
       break;
     case eq.RST_PITCH_SCAN:
-      pitch_p.Lock(1.0);
-      rate_p.Lock(1.0);
+      pitch_p.Lock(1.0f);
+      rate_p.Lock(1.0f);
       mmh.ResetGotClock();
       break;
     case eq.TOG_GRAIN_REV:
@@ -477,8 +517,11 @@ void process_events()
       grnltr.Stop();
       InitControls();
       grnltr.Reset( \
-          &sm[wav_start_pos[cur_wave]], \
-          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+          &sm[wav_info[cur_wave].wav_start_pos], \
+          wav_info[cur_wave].wav_file_hdr.raw_data.SubCHunk2Size / sizeof(int16_t), \
+	  wav_info[cur_wave].loop, wav_info[cur_wave].rev);
+      sample_bpm = wav_info[cur_wave].bpm;
+
       grnltr.Dispatch(0);
       break;
     case eq.TOG_LOOP:
@@ -490,6 +533,7 @@ void process_events()
       grnltr.Live( \
           &sm[0], \
           live_rec_buf_len);
+      sample_bpm = DEFAULT_BPM;
       break;
     case eq.LIVE_PLAY:
       gate = false;
@@ -498,7 +542,9 @@ void process_events()
       InitControls();
       grnltr.Reset( \
           &sm[0], \
-          live_rec_buf_len);
+          live_rec_buf_len, \
+	  true, false);
+      sample_bpm = DEFAULT_BPM;
       grnltr.Dispatch(0);
       break;
     case eq.INCR_MIDI:
@@ -512,8 +558,10 @@ void process_events()
       InitControls();
       LoadNewDir();
       grnltr.Reset( \
-          &sm[wav_start_pos[cur_wave]], \
-          wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t));
+          &sm[wav_info[cur_wave].wav_start_pos], \
+          wav_info[cur_wave].wav_file_hdr.raw_data.SubCHunk2Size / sizeof(int16_t), \
+	  wav_info[cur_wave].loop, wav_info[cur_wave].rev);
+      sample_bpm = wav_info[cur_wave].bpm;
       grnltr.Dispatch(0);
       break;
     case eq.TOG_RND_PAN:
@@ -573,7 +621,7 @@ void Parameters() {
 int main(void)
 {
   rectangular_window(rect_env, GRAIN_ENV_SIZE);
-  gaussian_window(gauss_env, GRAIN_ENV_SIZE, 0.5);
+  gaussian_window(gauss_env, GRAIN_ENV_SIZE, 0.5f);
   hamming_window(hamming_env, GRAIN_ENV_SIZE, EQUIRIPPLE_HAMMING_COEF);
   hann_window(hann_env, GRAIN_ENV_SIZE);
   expodec_window(expo_env, rexpo_env, GRAIN_ENV_SIZE, TAU);
@@ -633,10 +681,12 @@ int main(void)
   Status(GRNLTR_INIT);
 
   grnltr.Init(sr, \
-      &sm[wav_start_pos[cur_wave]], \
-      wav_file_names[cur_wave].raw_data.SubCHunk2Size / sizeof(int16_t), \
+      &sm[wav_info[cur_wave].wav_start_pos], \
+      wav_info[cur_wave].wav_file_hdr.raw_data.SubCHunk2Size / sizeof(int16_t), \
       grain_envs[cur_grain_env], \
-      GRAIN_ENV_SIZE);
+      GRAIN_ENV_SIZE, \
+      wav_info[cur_wave].loop, wav_info[cur_wave].rev);
+  sample_bpm = wav_info[cur_wave].bpm;
   grnltr.Dispatch(0);
   
   crush_l.Init();

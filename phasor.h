@@ -84,6 +84,12 @@ class Phasor
       play_ = true;
     }
 
+    void SetLoop(bool l)
+    {
+      if (l != loop_) {
+	ToggleLoop();
+      }
+    }
 
     void ToggleLoop()
     {
