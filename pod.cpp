@@ -129,6 +129,7 @@ void UpdateUI(int8_t cur_page)
           hw.led1.Set(LGREEN);
           /*
            * k1 = delay fbk
+           * k2 = delay xst 
            */
           break;
         default:
@@ -244,6 +245,7 @@ void Controls(int8_t cur_page)
   grnltr_params.DelayMix =     dly_mix_p.Process(k1, cur_page);
   grnltr_params.DelayTime =    dly_time_p.Process(k2, cur_page);
   grnltr_params.DelayFbk =     dly_fbk_p.Process(k1, cur_page);
+  grnltr_params.DelayXSt =     dly_xst_p.Process(k2, cur_page);
 }
 
 float hw_init() {

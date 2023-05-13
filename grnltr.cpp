@@ -74,7 +74,8 @@ int8_t	cur_dir = 0;
 
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, dly_fbk_p;
+	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, \
+	    dly_fbk_p, dly_xst_p;
 
 float cur_dly_time;
 
@@ -117,8 +118,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
     delay.l = dell.Read();
     delay.r = delr.Read();
 
-    dell.Write((grnltr_params.DelayFbk * delay.l) + sample.l);
-    delr.Write((grnltr_params.DelayFbk * delay.r) + sample.r);
+    dell.Write((grnltr_params.DelayFbk * ((grnltr_params.DelayXSt * delay.r) + ((1 - grnltr_params.DelayXSt) * delay.l))) + sample.l);
+    delr.Write((grnltr_params.DelayFbk * ((grnltr_params.DelayXSt * delay.l) + ((1 - grnltr_params.DelayXSt) * delay.r))) + sample.r);
     
     out[0][i] = (grnltr_params.DelayMix * delay.l) + ((1.0f - grnltr_params.DelayMix) * sample.l);
     out[1][i] = (grnltr_params.DelayMix * delay.r) + ((1.0f - grnltr_params.DelayMix) * sample.r);
@@ -441,6 +442,9 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_TOG_RETRIG:
       eq.push_event(eq.TOG_RETRIG, 0);
       break;
+    case CC_TOG_GATE:
+      eq.push_event(eq.TOG_GATE, 0);
+      break;
     case CC_DLY_MIX:
       dly_mix_p.MidiCCIn(val);
       break;
@@ -450,8 +454,8 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_DLY_FBK:
       dly_fbk_p.MidiCCIn(val);
       break;
-    case CC_TOG_GATE:
-      eq.push_event(eq.TOG_GATE, 0);
+    case CC_DLY_XST:
+      dly_xst_p.MidiCCIn(val);
       break;
     case CC_BPM:
       // 60 + CC 
@@ -632,6 +636,7 @@ void InitControls()
   dly_mix_p.Init(	  7,  DEFAULT_MIX,		0.0f,   1.0f, PARAM_THRESH);
   dly_time_p.Init( 	  7,  DEFAULT_DLY,		0.0f,   1.0f, PARAM_THRESH);
   dly_fbk_p.Init(	  8,  DEFAULT_FBK,		0.0f,   1.0f, PARAM_THRESH);
+  dly_xst_p.Init(	  8,  DEFAULT_XST,		0.0f,   1.0f, PARAM_THRESH);
 }
 
 void Parameters() {

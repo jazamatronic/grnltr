@@ -46,6 +46,7 @@
 #define	CC_DLY_MIX	    38
 #define	CC_DLY_TIME	    39
 #define	CC_DLY_FBK	    40
+#define	CC_DLY_XST	    41
 //C3
 #define BASE_NOTE	    60
 

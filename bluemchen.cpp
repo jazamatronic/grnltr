@@ -24,7 +24,7 @@ page_t pages[NUM_PAGES] = {
   {"PURPLE",  "loop",	    "retrig",	  eq.TOG_LOOP,	      eq.TOG_RETRIG}, 
   {"VIOLET",  "gate",	    "rnd pan",    eq.TOG_GATE,	      eq.TOG_RND_PAN}, 
   {"ROSE",    "dly mix",    "dly time",   eq.NONE,	      eq.NONE}, 
-  {"LGREEN",  "dly fbk",    "",		  eq.NONE,	      eq.NONE} 
+  {"LGREEN",  "dly fbk",    "dly xst",	  eq.NONE,	      eq.NONE} 
 };
 
 page_t setup = {"SETUP", "midi", "browse", eq.INCR_MIDI, eq.NONE};
@@ -166,6 +166,7 @@ void Controls(int8_t cur_page)
   grnltr_params.DelayMix =     dly_mix_p.Process(k1, cur_page);
   grnltr_params.DelayTime =    dly_time_p.Process(k2, cur_page);
   grnltr_params.DelayFbk =     dly_fbk_p.Process(k1, cur_page);
+  grnltr_params.DelayXSt =     dly_xst_p.Process(k2, cur_page);
 }
 
 float hw_init() {

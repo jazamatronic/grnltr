@@ -24,6 +24,7 @@
 #define DEFAULT_MIX	      0.0f
 #define DEFAULT_DLY	      0.5f
 #define DEFAULT_FBK	      0.0f
+#define DEFAULT_XST	      0.0f
 
 #define MAX_DELAY static_cast<size_t>(48000)
 
@@ -31,7 +32,8 @@
 #define PARAM_THRESH 0.01f
 extern PagedParam pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 		  grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
-		  sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, dly_fbk_p;
+		  sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, \
+		  dly_fbk_p, dly_xst_p;
 
 typedef struct {
   float	  GrainPitch;
@@ -48,6 +50,7 @@ typedef struct {
   float	  DelayMix;
   float	  DelayTime;
   float	  DelayFbk;
+  float	  DelayXSt;
   int32_t GrainDens;
 } grnltr_params_t;
 
