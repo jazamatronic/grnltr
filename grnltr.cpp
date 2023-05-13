@@ -17,6 +17,7 @@
 #include "led_colours.h"
 #include "Effects/decimator.h"
 #include "Utility/delayline.h"
+#include "Utility/dsp.h"
 #include "grain.h"
 #include "params.h"
 #include "windows.h"
@@ -75,6 +76,8 @@ PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, dly_fbk_p;
 
+float cur_dly_time;
+
 int8_t cur_page = 0;
 
 float sample_bpm = DEFAULT_BPM;
@@ -106,6 +109,10 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
     sample = grnltr.Process(f2s16(in[0][i]));
     sample.l = crush_l.Process(sample.l);
     sample.r = crush_r.Process(sample.r);
+
+    fonepole(cur_dly_time, sr * grnltr_params.DelayTime, .00007f);
+    dell.SetDelay(cur_dly_time);
+    delr.SetDelay(cur_dly_time);
 
     delay.l = dell.Read();
     delay.r = delr.Read();
@@ -434,6 +441,15 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_TOG_RETRIG:
       eq.push_event(eq.TOG_RETRIG, 0);
       break;
+    case CC_DLY_MIX:
+      dly_mix_p.MidiCCIn(val);
+      break;
+    case CC_DLY_TIME:
+      dly_time_p.MidiCCIn(val);
+      break;
+    case CC_DLY_FBK:
+      dly_fbk_p.MidiCCIn(val);
+      break;
     case CC_TOG_GATE:
       eq.push_event(eq.TOG_GATE, 0);
       break;
@@ -633,8 +649,6 @@ void Parameters() {
   crush_l.SetDownsampleFactor(grnltr_params.DownSample);
   crush_r.SetBitcrushFactor(grnltr_params.Crush);
   crush_r.SetDownsampleFactor(grnltr_params.DownSample);
-  dell.SetDelay(sr * grnltr_params.DelayTime);
-  delr.SetDelay(sr * grnltr_params.DelayTime);
 }
 
 

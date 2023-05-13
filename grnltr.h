@@ -43,6 +43,9 @@
 #define	CC_TOG_RND_PAN	    35
 #define	CC_TOG_RETRIG	    36
 #define	CC_TOG_GATE	    37
+#define	CC_DLY_MIX	    38
+#define	CC_DLY_TIME	    39
+#define	CC_DLY_FBK	    40
 //C3
 #define BASE_NOTE	    60
 
