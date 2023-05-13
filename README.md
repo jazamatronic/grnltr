@@ -38,6 +38,19 @@ Waves must be in mono s16 format.  I use sox to do conversion - something like:
 sox <in.wav> -r 48000 -c 1 -b 16 -e s <out.wav>
 ```
 
+Now supports a simple grnltr.cfg text file in the bank directory, which allows passing BPM, loop and reverse information to grnltr.
+An example looks like this, with one entry per line:  
+
+```
+#file,bpm,loop,rev
+01.wav,97.50,True,False
+02.wav,100.00,True,False
+...
+16.wav,113.00,True,False
+```
+
+The grnltr.cfg can be edited by hand or [grnltr_gui](https://github.com/jazamatronic/grnltr_gui) can be used to help automate its creation.  
+
 There is now also a small record buffer for "live" pass through granulization.  
 Once engaged, the buffer will fill once before grain processing starts.  
 Some parameters are disabled in this mode.
@@ -57,6 +70,8 @@ For Toggle parameters, send any CC value to toggle.
 | BLUE | WAV Select | Sample Start\*<br> CC12 Coarse, CC44 Fine | Sample End\*<br> CC13 Coarse, CC45 Fine | Live Rec Mode<br> CC31 | Play Rec Buffer<br> CC32 |
 | PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | Toggle Wave Loop\*<br> CC28 | Toggle MIDI note retrig\*<br> CC36|
 | VIOLET | Pan | Pan<br> CC33 | Random Pan Distance<br> CC34 | Toggle MIDI gate\*<br> CC37 | Toggle Random Pan<br> CC35 |
+| ROSE | Delay 1 | Delay Mix<br> CC38 | Delay Time<br> CC39 | NA | NA |
+| LGREEN | Delay 2 | Delay Feedback<br> CC40 | Delay Stereo Cross<br> CC41 | NA | NA |
 
 Parameters marked with a \* are disabled in live record mode.
 
