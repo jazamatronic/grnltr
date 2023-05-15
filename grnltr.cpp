@@ -72,6 +72,7 @@ char	cur_dir_name[MAX_DIR_LENGTH];
 uint8_t	dir_count = 0;
 int8_t	cur_dir = 0;
 
+Parameter knob1, knob2;
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, \
@@ -96,6 +97,7 @@ int cur_midi_channel = MIDI_CHANNEL;
 int  ReadWavsFromDir(const char *dir_path);
 void HandleMidiMessage();
 void InitControls();
+void Controls(int8_t cur_page); 
 
 bool retrig = false;
 bool gate = false;
@@ -637,6 +639,34 @@ void InitControls()
   dly_time_p.Init( 	  7,  DEFAULT_DLY,		0.0f,   1.0f, PARAM_THRESH);
   dly_fbk_p.Init(	  8,  DEFAULT_FBK,		0.0f,   1.0f, PARAM_THRESH);
   dly_xst_p.Init(	  8,  DEFAULT_XST,		0.0f,   1.0f, PARAM_THRESH);
+}
+
+void Controls(int8_t cur_page)
+{
+  float k1, k2;
+
+  k1 = knob1.Process();
+  k2 = knob2.Process();
+  
+  grnltr_params.GrainPitch =   pitch_p.Process(k1, cur_page);
+  if (mmh.GotClock()) {
+    rate_p.Set((mmh.GetBPM() / sample_bpm));
+  }
+  grnltr_params.ScanRate =     rate_p.Process(k2, cur_page);
+  grnltr_params.GrainDur =     grain_duration_p.Process(k1, cur_page);
+  grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
+  grnltr_params.ScatterDist =  scatter_dist_p.Process(k1, cur_page);
+  grnltr_params.PitchDist =    pitch_dist_p.Process(k1, cur_page);
+  grnltr_params.SampleStart =  sample_start_p.Process(k1, cur_page);
+  grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
+  grnltr_params.Crush =        crush_p.Process(k1, cur_page);
+  grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
+  grnltr_params.Pan =	       pan_p.Process(k1, cur_page);
+  grnltr_params.PanDist =      pan_dist_p.Process(k2, cur_page);
+  grnltr_params.DelayMix =     dly_mix_p.Process(k1, cur_page);
+  grnltr_params.DelayTime =    dly_time_p.Process(k2, cur_page);
+  grnltr_params.DelayFbk =     dly_fbk_p.Process(k1, cur_page);
+  grnltr_params.DelayXSt =     dly_xst_p.Process(k2, cur_page);
 }
 
 void Parameters() {

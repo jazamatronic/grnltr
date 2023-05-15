@@ -4,7 +4,7 @@
 #include "grnltr.h"
 
 kxmx::Bluemchen hw;
-static Parameter knob1, knob2;
+extern Parameter knob1, knob2;
 uint32_t last_ui_update = 0;
 bool long_press = false;
 bool extra_long_press = false;
@@ -139,34 +139,6 @@ void UpdateUI(int8_t cur_page)
 
     hw.display.Update();
   }
-}
-
-void Controls(int8_t cur_page)
-{
-  float k1, k2;
-
-  k1 = knob1.Process();
-  k2 = knob2.Process();
-  
-  grnltr_params.GrainPitch =   pitch_p.Process(k1, cur_page);
-  if (mmh.GotClock()) {
-    rate_p.Set((mmh.GetBPM() / sample_bpm));
-  }
-  grnltr_params.ScanRate =     rate_p.Process(k2, cur_page);
-  grnltr_params.GrainDur =     grain_duration_p.Process(k1, cur_page);
-  grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
-  grnltr_params.ScatterDist =  scatter_dist_p.Process(k1, cur_page);
-  grnltr_params.PitchDist =    pitch_dist_p.Process(k1, cur_page);
-  grnltr_params.SampleStart =  sample_start_p.Process(k1, cur_page);
-  grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
-  grnltr_params.Crush =        crush_p.Process(k1, cur_page);
-  grnltr_params.DownSample =   downsample_p.Process(k2, cur_page);
-  grnltr_params.Pan =	       pan_p.Process(k1, cur_page);
-  grnltr_params.PanDist =      pan_dist_p.Process(k2, cur_page);
-  grnltr_params.DelayMix =     dly_mix_p.Process(k1, cur_page);
-  grnltr_params.DelayTime =    dly_time_p.Process(k2, cur_page);
-  grnltr_params.DelayFbk =     dly_fbk_p.Process(k1, cur_page);
-  grnltr_params.DelayXSt =     dly_xst_p.Process(k2, cur_page);
 }
 
 float hw_init() {
