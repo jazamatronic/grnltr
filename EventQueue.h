@@ -30,6 +30,7 @@ class EventQueue
     TOG_RND_PAN,
     TOG_RETRIG,
     TOG_GATE,
+    TOG_NOTE,
     NONE
   };
 

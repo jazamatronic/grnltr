@@ -105,8 +105,6 @@ void UpdateUI(int8_t cur_page)
           /*
            * k1 = Bit Crush
            * k2 = Downsample
-           * b1 = Toggle Wave Loop (disabled in live mode)
-           * b2 = Toggle Retrig (disabled in live mode)
            */
           break;
         case 6:
@@ -114,8 +112,7 @@ void UpdateUI(int8_t cur_page)
           /*
            * k1 = pan
            * k2 = pan dist
-           * b1 = Toggle Gate (disabled in live mode)
-           * b2 = Toggle random pan
+           * b1 = Toggle random pan
            */
           break;
         case 7:
@@ -123,6 +120,8 @@ void UpdateUI(int8_t cur_page)
           /*
            * k1 = delay mix
            * k2 = delay time
+           * b1 = Toggle Gate (disabled in live mode)
+           * b2 = Toggle Retrig (disabled in live mode)
            */
           break;
         case 8:
@@ -130,6 +129,8 @@ void UpdateUI(int8_t cur_page)
           /*
            * k1 = delay fbk
            * k2 = delay xst 
+           * b1 = Toggle MIDI note mode
+           * b2 = Toggle Wave Loop (disabled in live mode)
            */
           break;
         default:
@@ -203,16 +204,23 @@ void UpdateButtons(int8_t cur_page)
       if(hw.button1.RisingEdge()) {
 	eq.push_event(eq.TOG_LOOP, 0);
       }
-      if(hw.button2.RisingEdge()) {
-	eq.push_event(eq.TOG_RETRIG, 0);
-      }
       break;
     case 6:
+      if(hw.button1.RisingEdge()) {
+	eq.push_event(eq.TOG_RND_PAN, 0);
+      }
+      break;
+    case 7:
       if(hw.button1.RisingEdge()) {
 	eq.push_event(eq.TOG_GATE, 0);
       }
       if(hw.button2.RisingEdge()) {
-	eq.push_event(eq.TOG_RND_PAN, 0);
+	eq.push_event(eq.TOG_RETRIG, 0);
+      }
+      break;
+    case 8:
+      if(hw.button1.RisingEdge()) {
+	eq.push_event(eq.TOG_NOTE, 0);
       }
       break;
     default:

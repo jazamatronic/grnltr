@@ -99,8 +99,11 @@ void HandleMidiMessage();
 void InitControls();
 void Controls(int8_t cur_page); 
 
+// midi behaviour
 bool retrig = false;
 bool gate = false;
+bool note = false;
+uint note_on_count = 0;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -459,6 +462,9 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_DLY_XST:
       dly_xst_p.MidiCCIn(val);
       break;
+    case CC_NOTE:
+      eq.push_event(eq.TOG_NOTE, 0);
+      break;
     case CC_BPM:
       // 60 + CC 
       // Need some concept of bars or beats per sample
@@ -472,10 +478,39 @@ void MidiPBHCB(int16_t val)
   pitch_p.MidiPBIn(val);
 }
 
+void MidiNOffHCB(uint8_t n, uint8_t vel) 
+{ 
+  int8_t this_wave = n - BASE_NOTE;
+  if ((this_wave == cur_wave) || note) {
+    if (gate) {
+      if (!note | (--note_on_count == 0)) {
+	grnltr.Stop();
+      }
+    }
+  }
+}
+
 void MidiNOnHCB(uint8_t n, uint8_t vel) 
 { 
   int8_t next_wave;
-  if ((n >= BASE_NOTE) && (n < (BASE_NOTE + wav_file_count))) {
+
+  // Handle note on with 0 velocity as note off
+  if (vel == 0) {
+    MidiNOffHCB(n, vel);
+    return;
+  }
+
+  if (note) {
+    pitch_p.Lock(powf(2, (n - BASE_NOTE) / 12.0f));
+    if (gate) { 
+      note_on_count++;
+    }
+    if (retrig) {
+      grnltr.ReStart();
+    } else {
+      grnltr.Start();
+    }
+  } else if ((n >= BASE_NOTE) && (n < (BASE_NOTE + wav_file_count))) {
     next_wave = n - BASE_NOTE;
     if (next_wave != cur_wave) {
       cur_wave = next_wave;
@@ -493,16 +528,6 @@ void MidiNOnHCB(uint8_t n, uint8_t vel)
       } else {
 	grnltr.Start();
       }
-    }
-  }
-}
-
-void MidiNOffHCB(uint8_t n, uint8_t vel) 
-{ 
-  int8_t this_wave = n - BASE_NOTE;
-  if (this_wave == cur_wave) {
-    if (gate) {
-      grnltr.Stop();
     }
   }
 }
@@ -614,6 +639,10 @@ void process_events()
       if (!grnltr.IsLive()) {
 	gate = !gate;
       }
+      break;
+    case eq.TOG_NOTE:
+      note = !note;
+      note_on_count = 0;
       break;
     case eq.NONE:
     default:

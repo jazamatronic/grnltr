@@ -68,10 +68,10 @@ For Toggle parameters, send any CC value to toggle.
 | YELLOW | Grain Scatter | Scatter Distance<br> CC20 | N/A | Toggle Scatter<br> CC15 | Toggle Freeze<br> CC27 |
 | GREEN | Randomize | Pitch Distance<br> CC22 | N/A | Toggle Random Pitch<br> CC21 | Toggle Random Density<br> CC29 |
 | BLUE | WAV Select | Sample Start\*<br> CC12 Coarse, CC44 Fine | Sample End\*<br> CC13 Coarse, CC45 Fine | Live Rec Mode<br> CC31 | Play Rec Buffer<br> CC32 |
-| PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | Toggle Wave Loop\*<br> CC28 | Toggle MIDI note retrig\*<br> CC36|
-| VIOLET | Pan | Pan<br> CC33 | Random Pan Distance<br> CC34 | Toggle MIDI gate\*<br> CC37 | Toggle Random Pan<br> CC35 |
-| ROSE | Delay 1 | Delay Mix<br> CC38 | Delay Time<br> CC39 | NA | NA |
-| LGREEN | Delay 2 | Delay Feedback<br> CC40 | Delay Stereo Cross<br> CC41 | NA | NA |
+| PURPLE | Decimate/Record | Bit Crush<br> CC23 | Downsample<br> CC24 | N/A | N/A |
+| VIOLET | Pan | Pan<br> CC33 | Random Pan Distance<br> CC34 | Toggle Random Pan<br> CC35 | N/A |
+| ROSE | Delay 1 | Delay Mix<br> CC38 | Delay Time<br> CC39 | Toggle MIDI gate\*<br> CC37 | Toggle MIDI note retrig\*<br> CC36 |
+| LGREEN | Delay 2 | Delay Feedback<br> CC40 | Delay Stereo Cross<br> CC41 | Toggle MIDI note<br> CC42 | Toggle Wave Loop\*<br> CC28 |
 
 Parameters marked with a \* are disabled in live record mode.
 
