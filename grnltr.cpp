@@ -45,7 +45,7 @@ float hann_env[GRAIN_ENV_SIZE];
 float expo_env[GRAIN_ENV_SIZE];
 float rexpo_env[GRAIN_ENV_SIZE];
 float *grain_envs[] = {rect_env, gauss_env, hamming_env, hann_env, expo_env, rexpo_env};
-size_t cur_grain_env = 2; 
+size_t cur_grain_env = DEFAULT_GRAIN_ENV; 
 
 // 64 MB of memory - how many 16bit samples can we fit in there?
 int16_t DSY_SDRAM_BSS sm[(64 * 1024 * 1024) / sizeof(int16_t)];

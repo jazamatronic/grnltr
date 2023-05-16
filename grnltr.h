@@ -4,6 +4,7 @@
 
 #define GRAIN_ENV_SIZE 1024
 #define NUM_GRAIN_ENVS 6
+#define DEFAULT_GRAIN_ENV 2 // hamming
 
 #define GRNLTR_PATH	"/grnltr"
 #define MAX_DIRS	64
