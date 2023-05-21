@@ -465,6 +465,12 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_NOTE:
       eq.push_event(eq.TOG_NOTE, 0);
       break;
+    case CC_GRAINENV:
+      eq.push_event(eq.INCR_GRAIN_ENV, 0);
+      break;
+    case CC_RST_PITCH_SCAN:
+      eq.push_event(eq.RST_PITCH_SCAN, 0);
+      break;
     case CC_BPM:
       // 60 + CC 
       // Need some concept of bars or beats per sample

@@ -49,6 +49,8 @@
 #define	CC_DLY_FBK	    40
 #define	CC_DLY_XST	    41
 #define	CC_NOTE		    42
+#define CC_GRAINENV	    43
+#define CC_RST_PITCH_SCAN   46
 //C3
 #define BASE_NOTE	    60
 
