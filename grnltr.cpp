@@ -281,7 +281,7 @@ int ReadWavsFromDir(const char *dir_path)
 	memcpy((void *)&sm[this_wav_start_pos], buf, bytesread);
       	cur_sm_bytes += bytesread;
 	this_wav_start_pos = (cur_sm_bytes / sizeof(int16_t));
-      } while (bytesread == CP_BUF_SIZE);
+      } while (bytesread == CP_BUF_SIZE && !f_eof(&SDFile));
 
       f_close(&SDFile);
       wavs_read++;
