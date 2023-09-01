@@ -292,8 +292,12 @@ int ReadWavsFromDir(const char *dir_path)
 
 void LoadNewDir() {
   strcpy(cur_dir_name, GRNLTR_PATH);
-  strcat(cur_dir_name, "/");
-  strcat(cur_dir_name, &dir_names[cur_dir][0]);
+  // If there are no dirs, just wavs under /grnltr
+  // From https://github.com/jazamatronic/grnltr/issues/1
+  if (strlen(&dir_names[cur_dir][0]) > 0) {
+    strcat(cur_dir_name, "/");
+    strcat(cur_dir_name, &dir_names[cur_dir][0]);
+  }
   if (ReadWavsFromDir(cur_dir_name) < 0) {
     Status(DIR_ERROR);
 
