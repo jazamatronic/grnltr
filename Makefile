@@ -29,6 +29,9 @@ include $(SYSTEM_FILES_DIR)/Makefile
 # Optimize for size - slaps pod, you can fit so many grains into this thing
 CFLAGS += -Os
 
+# Do I have any double promotion bloating my code?
+CFLAGS += -Wdouble-promotion
+
 ifeq "$(BUILD_TARGET)" "bluemchen"
 C_DEFS += -DTARGET_BLUEMCHEN
 C_INCLUDES += -I$(BLUEMCHEN_DIR)/src
@@ -48,3 +51,4 @@ C_DEFS += -DVER=\"$(VERSION)\"
 release: build/$(TARGET).bin
 	mkdir -p rel
 	cp build/$(TARGET).bin rel/$(TARGET).$(VERSION).bin
+	cp build/$(TARGET).elf rel/$(TARGET).$(VERSION).elf

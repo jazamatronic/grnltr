@@ -134,7 +134,7 @@ class PagedParam
       if (in < 0) {
 	cur_val_ = init_val_ + (in * init_val_);
       } else {
-	cur_val_ = init_val_ + (in * (1.0 - init_val_));
+	cur_val_ = init_val_ + (in * (1.0f - init_val_));
       }
     }
 

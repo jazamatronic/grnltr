@@ -4,7 +4,7 @@
 void gaussian_window(float *mem, size_t len, float sigma)
 {
   for (size_t i = 0; i < len; i++) {
-    mem[i] = expf( -0.5f * pow(((i - len/2) / (sigma * len/2)), 2));
+    mem[i] = expf( -0.5f * powf(((i - len/2) / (sigma * len/2)), 2));
   }
 }
 
@@ -39,14 +39,14 @@ void hamming_window(float *mem, size_t len, float a0)
 {
   float a1 = 1 - a0;
   for (size_t i = 0; i < len; i++) {
-    mem[i] = a0 - a1 * cosf(2.0f * M_PI * i / len);
+    mem[i] = a0 - a1 * cosf(2.0f * float(M_PI) * i / len);
   }
 }
 
 void sine_window(float *mem, size_t len)
 {
   for (size_t i = 0; i < len; i++) {
-    mem[i] = sinf(M_PI * i / len);
+    mem[i] = sinf(float(M_PI) * i / len);
   }
 }
 
@@ -62,9 +62,9 @@ void blackman_var_window(float *mem, size_t len, float a0, float a1, float a2, f
   for (size_t i = 0; i < len; i++) {
     idx = symmetric ? i - (len / 2) : i;
     mem[i] = a0 \
-	     + a1 * cosf(2.0f * M_PI * idx / (len - 1)) \
-	     + a2 * cosf(4.0f * M_PI * idx / (len - 1)) \
-	     + a3 * cosf(6.0f * M_PI * idx / (len - 1)) \
+	     + a1 * cosf(2.0f * float(M_PI) * idx / (len - 1)) \
+	     + a2 * cosf(4.0f * float(M_PI) * idx / (len - 1)) \
+	     + a3 * cosf(6.0f * float(M_PI) * idx / (len - 1)) \
 	     - offset;
   }
 }

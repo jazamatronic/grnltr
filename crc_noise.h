@@ -29,7 +29,7 @@ namespace daisysp
 	rand_ = CRC->DR;
 
 	// take the lower 16 bits and convert to a float
-	frand_ = (2.0 * ((float(rand_ & 0x0000FFFF) / 65535.0f) - 0.5));
+	frand_ = (2.0f * ((float(rand_ & 0x0000FFFF) / 65535.0f) - 0.5f));
       	return frand_;
       }
 
@@ -39,7 +39,7 @@ namespace daisysp
 	rand_ = CRC->DR;
 
 	// take the lower 16 bits and convert to a float
-	frand_ = (2.0 * ((float(rand_ & 0x0000FFFF) / 65535.0f) - 0.5));
+	frand_ = (2.0f * ((float(rand_ & 0x0000FFFF) / 65535.0f) - 0.5f));
       	return frand_;
       }
 
