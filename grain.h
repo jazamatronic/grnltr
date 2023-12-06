@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sample_phasor.h"
+#include "Utility/dsp.h"
 
 typedef struct {
   float l;
@@ -88,7 +89,6 @@ class Grain
     // pan -> 0 = l, 1 = r
     void SetGrainPan(float pan)
     {
-      //float pan_rads = (M_PI / 4) + pan * (-M_PI / 2);
       float pan_rads = (PI_F / 4) + pan * (-PI_F / 2);
       float root_two_on_two = sqrtf(2.0f) / 2.0f;
       float c = cosf(pan_rads);
