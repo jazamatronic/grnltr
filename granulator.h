@@ -2,8 +2,8 @@
 
 #include "grain.h"
 #include "crc_noise.h"
-
 #include "params.h"
+#include "quantize.h"
 
 #define MAX_GRAINS 16
 // Let's stick to 16bit samples for now
@@ -24,6 +24,19 @@ class Granulator
       Setup(loop, rev);
       live_ = filled_ = false;
       rng.Init();
+
+      // Scales
+      scales[0].Init(13, chromatic);
+      scales[1].Init(3, min3_octs);
+      scales[2].Init(3, maj3_octs);
+      scales[3].Init(3, fourths_octs);
+      scales[4].Init(3, fifths_octs);
+      scales[5].Init(4, min);
+      scales[6].Init(5, min7);
+      scales[7].Init(5, minM7);
+      scales[8].Init(4, maj);
+      scales[9].Init(5, maj7);
+      scales[10].Init(5, majM7);
     }
 
     void Stop()
@@ -94,6 +107,11 @@ class Granulator
       pitch_dist_ = dist;
     }
 
+    void SetScale(float scale)
+    {
+      scale_ = (int)roundf(scale * NUM_SCALES);
+    }
+
     // don't allow this in live mode
     void SetScanRate(float rate)
     {
@@ -123,7 +141,11 @@ class Granulator
 	if (silo[i].IsDone()) {
 	  if (random_pitch_) {
 	    rand = rng.Process();
-	    pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0f + (rand * pitch_dist_))));
+	    if (scale_ == 0) {
+	      pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0f + (rand * pitch_dist_))));
+	    } else {
+	      pitch = fminf(4.0f, fmaxf(0.25f, pitch * (1.0f + scales[scale_ - 1].Quantize(rand * pitch_dist_))));
+	    }
 	  }
 	  if (random_pan_) {
 	    rand = rng.Process();
@@ -293,6 +315,7 @@ class Granulator
       SetDensity(sr_/DEFAULT_GRAIN_DENS);
       SetScatterDist(DEFAULT_SCATTER_DIST);
       SetPitchDist(DEFAULT_PITCH_DIST);
+      SetScale(DEFAULT_SCALE);
       SetPan(DEFAULT_PAN);
       SetPanDist(DEFAULT_PAN_DIST);
       reverse_grain_ = rev;
@@ -306,13 +329,14 @@ class Granulator
     Grain<int16_t> silo[MAX_GRAINS];
     Phasor sample_pos_;
     int16_t *sample_start_;  
-    size_t len_, env_len_, scatter_dist_, write_pos_;
+    size_t len_, env_len_, scatter_dist_, write_pos_, scale_;
     int32_t density_, density_count_;
     float sr_, grain_dur_, grain_pitch_, pitch_dist_, pan_, pan_dist_;
     float *env_mem_;
     bool sample_loop_, stop_, reverse_grain_, scatter_grain_, \
 	 random_pitch_, random_density_, freeze_, random_pan_;
     daisysp::crc_noise rng;
+    Scale scales[NUM_SCALES];
 
     // used for live record buffer only
     int16_t *record_buf_;  

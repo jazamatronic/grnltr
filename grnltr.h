@@ -51,6 +51,7 @@
 #define	CC_NOTE		    42
 #define CC_GRAINENV	    43
 #define CC_RST_PITCH_SCAN   46
+#define CC_SCALE	    47
 //C3
 #define BASE_NOTE	    60
 

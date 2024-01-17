@@ -19,7 +19,7 @@ page_t pages[NUM_PAGES] = {
   {"RED",     "grain env",  "rst pitch",  eq.INCR_GRAIN_ENV,  eq.RST_PITCH_SCAN},  /* k1 = Grain Pitch	    k2 = Scan Rate*	*/
   {"ORANGE",  "grain rev",  "scan rev",	  eq.TOG_GRAIN_REV,   eq.TOG_SCAN_REV},	   /* k1 = Grain Duration   k2 = Grain Density	*/
   {"YELLOW",  "scatter",    "freeze",	  eq.TOG_SCAT,	      eq.TOG_FREEZE},	   /* k1 = Scatter Distance			*/
-  {"GREEN",   "rnd pitch",  "rnd dens",	  eq.TOG_RND_PITCH,   eq.TOG_RND_DENS},    /* k1 = Pitch Distance			*/
+  {"GREEN",   "rnd pitch",  "rnd dens",	  eq.TOG_RND_PITCH,   eq.TOG_RND_DENS},    /* k1 = Pitch Distance   k2 = Quantize scale */
   {"BLUE",    "live rec",   "play rec",	  eq.LIVE_REC,	      eq.LIVE_PLAY},       /* k1 = Sample Start*    k2 = Sample End*	*/
   {"PURPLE",  "",	    "",		  eq.NONE,	      eq.NONE},            /* k1 = Bit Crush	    k2 = Downsample	*/
   {"VIOLET",  "rnd pan",    "",		  eq.TOG_RND_PAN,     eq.NONE},            /* k1 = pan		    k2 = pan dist	*/

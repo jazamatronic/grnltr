@@ -25,6 +25,7 @@
 #define DEFAULT_DLY	      0.5f
 #define DEFAULT_FBK	      0.0f
 #define DEFAULT_XST	      0.0f
+#define DEFAULT_SCALE	      0.0f
 
 #define MAX_DELAY static_cast<size_t>(48000)
 
@@ -41,6 +42,7 @@ typedef struct {
   float   GrainDur;
   float	  ScatterDist;
   float	  PitchDist;
+  float	  Scale;
   float	  SampleStart;
   float	  SampleEnd;
   float	  Crush;

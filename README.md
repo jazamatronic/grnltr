@@ -66,7 +66,7 @@ For Toggle parameters, send any CC value to toggle.
 | RED | Pitch/Time | Grain Pitch (-2 8va to +2 8va)<br> CC3 and Pitch Bend | Scan Rate\*<br> CC1 | Cycle env type | Reset Grain Pitch and Scan Rate |
 | ORANGE | Grain Duration/Density | Grain Duration (10 to 200mS)<br> CC9 | Grain Density (2 to 200 per second)<br> CC14 | Grain Reverse<br> CC25 | Scan Reverse\*<br> CC26 |
 | YELLOW | Grain Scatter | Scatter Distance<br> CC20 | N/A | Toggle Scatter<br> CC15 | Toggle Freeze<br> CC27 |
-| GREEN | Randomize | Pitch Distance<br> CC22 | N/A | Toggle Random Pitch<br> CC21 | Toggle Random Density<br> CC29 |
+| GREEN | Randomize | Pitch Distance<br> CC22 | Quantize Scale<br> CC47 | Toggle Random Pitch<br> CC21 | Toggle Random Density<br> CC29 |
 | BLUE | WAV Select/Record | Sample Start\*<br> CC12 Coarse, CC44 Fine | Sample End\*<br> CC13 Coarse, CC45 Fine | Live Rec Mode<br> CC31 | Play Rec Buffer<br> CC32 |
 | PURPLE | Decimate | Bit Crush<br> CC23 | Downsample<br> CC24 | N/A | N/A |
 | VIOLET | Pan | Pan<br> CC33 | Random Pan Distance<br> CC34 | Toggle Random Pan<br> CC35 | N/A |

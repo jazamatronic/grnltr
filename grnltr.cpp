@@ -76,7 +76,7 @@ Parameter knob1, knob2;
 PagedParam  pitch_p, rate_p, crush_p, downsample_p, grain_duration_p, \
 	    grain_density_p, scatter_dist_p, pitch_dist_p, sample_start_p, \
 	    sample_end_p, pan_p, pan_dist_p, dly_mix_p, dly_time_p, \
-	    dly_fbk_p, dly_xst_p;
+	    dly_fbk_p, dly_xst_p, scale_p;
 
 float cur_dly_time;
 
@@ -475,6 +475,9 @@ void MidiCCHCB(uint8_t cc, uint8_t val)
     case CC_RST_PITCH_SCAN:
       eq.push_event(eq.RST_PITCH_SCAN, 0);
       break;
+    case CC_SCALE:
+      scale_p.MidiCCIn(val);
+      break;
     case CC_BPM:
       // 60 + CC 
       // Need some concept of bars or beats per sample
@@ -665,9 +668,10 @@ void InitControls()
   pitch_p.Init(           0,  DEFAULT_GRAIN_PITCH,	MIN_GRAIN_PITCH,  MAX_GRAIN_PITCH,  PARAM_THRESH);
   rate_p.Init(            0,  DEFAULT_SCAN_RATE,        MIN_SCAN_RATE,	  MAX_SCAN_RATE,    PARAM_THRESH);
   grain_duration_p.Init(  1,  DEFAULT_GRAIN_DUR,        MIN_GRAIN_DUR,    MAX_GRAIN_DUR,    PARAM_THRESH);
-  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENS,  sr/MIN_GRAIN_DENS, sr/MAX_GRAIN_DENS, PARAM_THRESH);
+  grain_density_p.Init(   1,  sr/DEFAULT_GRAIN_DENS,	sr/MIN_GRAIN_DENS, sr/MAX_GRAIN_DENS, PARAM_THRESH);
   scatter_dist_p.Init(    2,  DEFAULT_SCATTER_DIST,	0.0f,   1.0f, PARAM_THRESH);
   pitch_dist_p.Init(      3,  DEFAULT_PITCH_DIST,       0.0f,   1.0f, PARAM_THRESH);
+  scale_p.Init(		  3,  DEFAULT_SCALE,		0.0f,   1.0f, PARAM_THRESH);
   sample_start_p.Init(    4,  0.0f,			0.0f,   1.0f, PARAM_THRESH);
   sample_end_p.Init(	  4,  1.0f,			0.0f,   1.0f, PARAM_THRESH);
   crush_p.Init(           5,  0.0f,                     0.0f,   1.0f, PARAM_THRESH);
@@ -696,6 +700,7 @@ void Controls(int8_t cur_page)
   grnltr_params.GrainDens =    (int32_t)grain_density_p.Process(k2, cur_page);
   grnltr_params.ScatterDist =  scatter_dist_p.Process(k1, cur_page);
   grnltr_params.PitchDist =    pitch_dist_p.Process(k1, cur_page);
+  grnltr_params.Scale =	       scale_p.Process(k2, cur_page);
   grnltr_params.SampleStart =  sample_start_p.Process(k1, cur_page);
   grnltr_params.SampleEnd =    sample_end_p.Process(k2, cur_page);
   grnltr_params.Crush =        crush_p.Process(k1, cur_page);
@@ -715,6 +720,7 @@ void Parameters() {
   grnltr.SetDensity(grnltr_params.GrainDens);
   grnltr.SetScatterDist(grnltr_params.ScatterDist);
   grnltr.SetPitchDist(grnltr_params.PitchDist);
+  grnltr.SetScale(grnltr_params.Scale);
   grnltr.SetSampleStart(grnltr_params.SampleStart);
   grnltr.SetSampleEnd(grnltr_params.SampleEnd);
   grnltr.SetPan(grnltr_params.Pan);
